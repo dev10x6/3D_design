@@ -72,3 +72,8 @@ the wall, so `BALCONY_OUT` in `corner.js` is the reference edge there, and its
 inner face stops 0.01 outside the 0.25 slab overhang to stay off coplanar faces.
 Add a new finish by adding a palette to `CORNER_STYLES` and branching in
 `frameFloor()`; do not hard-code colours in `corner.js`.
+
+The UI can restrict which storeys carry the frame (`CORNER_SPANS` in
+`main.js`). `applyCornerStyle()` rebuilds the frame on every change and drops
+the levels outside the current span, so a style switch never resurrects a
+hidden storey and never leaves a duplicate group behind.

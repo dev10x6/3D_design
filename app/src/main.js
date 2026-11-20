@@ -76,12 +76,18 @@ scene.add(site, building);
 // Lives inside the per-level groups so level isolation hides it with its
 // floor; the roof cap follows the roof group.
 let corner = null;
+const CORNER_SPANS = { all: ['F1', 'F2', 'F3'], F2: ['F2', 'F3'], F3: ['F3'] };
+let cornerSpan = CORNER_SPANS.all;
+
 function applyCornerStyle(style) {
   if (corner) {
     for (const g of Object.values(corner.levels)) g.parent?.remove(g);
     corner.roof.parent?.remove(corner.roof);
   }
   corner = buildCorner(style);
+  for (const id of Object.keys(corner.levels)) {
+    if (!cornerSpan.includes(id)) delete corner.levels[id];
+  }
   for (const [id, g] of Object.entries(corner.levels)) {
     const host = building.userData.floorGroups[id];
     g.visible = host.visible;
@@ -299,6 +305,13 @@ cornerButtons.forEach((b) => b.addEventListener('click', () => {
     applyCornerStyle(style);
     setLevel(document.querySelector('[data-level].active').dataset.level);
   }
+}));
+const spanButtons = document.querySelectorAll('[data-span]');
+spanButtons.forEach((b) => b.addEventListener('click', () => {
+  spanButtons.forEach((o) => o.classList.toggle('active', o === b));
+  cornerSpan = CORNER_SPANS[b.dataset.span];
+  applyCornerStyle(corner.style);
+  setLevel(document.querySelector('[data-level].active').dataset.level);
 }));
 applyCornerStyle(CORNER_FRAME.style);
 setLevel('all');
