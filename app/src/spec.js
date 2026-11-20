@@ -79,18 +79,18 @@ export const OPENINGS = {
 // Balconies, sized from the labels on the plans:
 //   BALCONY 27'-1" x 4'-0"   front
 //   10'-10" x 3'-0"          west
-//   6'-7" x 8'-2"            east, beside the lift
+// The 6'-7" x 8'-2" balcony the plans show east of the building beside the
+// lift is not built: the east face runs straight up past the lift pillars
+// C16 and C19 with no balcony on it.
 export const BALCONIES = {
   F1: [
     { id: 'front', x0: 0, x1: 27.1, z0: 90.1, z1: 94.1, sides: ['front', 'west', 'east'] },
     { id: 'west', x0: -3.0, x1: 0, z0: 52.3, z1: 63.1, sides: ['west', 'front', 'rear'] },
-    { id: 'east', x0: 27.1, x1: 33.7, z0: 41.9, z1: 48.4, sides: ['east', 'front', 'rear'] },
     { id: 'rear', x0: 0, x1: 27.1, z0: -4.0, z1: 0, sides: ['rear', 'west', 'east'] },
   ],
   F2: [
     { id: 'front', x0: 0, x1: 27.1, z0: 90.1, z1: 94.1, sides: ['front', 'west', 'east'] },
     { id: 'west', x0: -3.0, x1: 0, z0: 52.3, z1: 63.1, sides: ['west', 'front', 'rear'] },
-    { id: 'east', x0: 27.1, x1: 33.7, z0: 41.9, z1: 48.4, sides: ['east', 'front', 'rear'] },
     { id: 'rear', x0: 0, x1: 27.1, z0: -4.0, z1: 0, sides: ['rear', 'west', 'east'] },
   ],
   F3: [
@@ -115,6 +115,56 @@ export const ROOF_EXTENSIONS = [
   { level: 'F3', from: 'frontWest', depth: 2.0, armX: 13.55, armZ: 17.0 },
   { level: 'F3', from: 'rearEast', depth: 2.0, armX: 27.1, armZ: 17.0 },
 ];
+
+// Fourth-floor concept. This room is not on the drawings - it is a proposed
+// future addition, so nothing here is measured; it is derived from the ground
+// pillar grid instead, which is the only thing that fixes where it can land.
+//
+// The room sits on the roof over the third floor, in the rear-west corner, and
+// is L-shaped: a deep band over the four pillars, plus an arm cantilevered
+// forward from it down the west side. The band is the pillars' own bounding
+// rectangle, so the whole loaded part of the room sits over C28, C29, C31 and
+// C32 and nothing is carried by slab bending. The arm reaches past them and is
+// the cantilever - that is what turns the band into an L.
+//
+// `armLength` and `armWidth` are free choices, not measurements. `eave` is the
+// same 2 ft cantilevered eave the front-west corner uses, turned outward along
+// the free edges of the L.
+export const FOURTH_FLOOR = {
+  id: 'F4',
+  name: 'Fourth Floor (concept)',
+  base: BUILDING.roofBase + 0.7,
+  height: 10.5,
+  wallT: 0.6,
+  eave: 2.0,
+  armLength: 12.0,
+  armWidth: 7.0,
+  pillars: ['C28', 'C31', 'C32', 'C29'],
+};
+
+// Plan of the fourth-floor room, as the two rectangles that make the L, taken
+// from the pillar sections rather than from round numbers so that moving a
+// pillar moves the room with it.
+export function fourthFloorRects() {
+  const cols = FOURTH_FLOOR.pillars.map((id) => GROUND_COLUMNS.find((c) => c.id === id));
+  const missing = FOURTH_FLOOR.pillars.filter((id, i) => !cols[i]);
+  if (missing.length) {
+    throw new Error(`FOURTH_FLOOR.pillars: no such column: ${missing.join(', ')}`);
+  }
+
+  const x0 = Math.min(...cols.map((c) => c.x - c.w / 2));
+  const x1 = Math.max(...cols.map((c) => c.x + c.w / 2));
+  const z0 = Math.min(...cols.map((c) => c.z - c.d / 2));
+  const z1 = Math.max(...cols.map((c) => c.z + c.d / 2));
+  const band = { x0, x1, z0, z1 };
+
+  // The arm starts where the band ends and runs forward, towards the street.
+  return {
+    band,
+    arm: { x0, x1: x0 + FOURTH_FLOOR.armWidth, z0: z1, z1: z1 + FOURTH_FLOOR.armLength },
+  };
+}
+
 
 // The two long facades. The front carries the street, the driveway and the
 // 27'-1" x 4'-0" balcony, so it sits at +Z.

@@ -2,10 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { BUILDING, PLOT, CORNER_FRAME } from './spec.js';
+import { BUILDING, PLOT, CORNER_FRAME, FOURTH_FLOOR } from './spec.js';
 import { buildBuilding, makeMaterials } from './building.js';
 import { buildCorner } from './corner.js';
 import { buildSite } from './site.js';
+import { buildFourthFloor } from './fourth.js';
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
@@ -71,6 +72,14 @@ const mats = makeMaterials();
 const site = buildSite(mats);
 const building = buildBuilding(mats);
 scene.add(site, building);
+
+// ---------- Fourth floor (concept) ----------
+// A separate level group, not a BUILDING.floors entry: the drawing set stops at
+// the third floor, so this room must not shift the floor count, areas or roof
+// datum. It gets its own entry in floorGroups so level isolation can show it.
+const fourth = buildFourthFloor(mats);
+building.add(fourth.group);
+building.userData.floorGroups[FOURTH_FLOOR.id] = fourth.group;
 
 // ---------- Corner box ----------
 // buildCorner returns one group per storey the box passes through; each goes
@@ -273,11 +282,14 @@ function setLevel(id) {
   const groups = building.userData.floorGroups;
   for (const [key, g] of Object.entries(groups)) g.visible = id === 'all' || key === id;
   const roofGroup = building.getObjectByName('roof');
-  roofGroup.visible = id === 'all' || id === 'F3';
+  // The fourth-floor room stands on the roof, so the roof is shown with it too.
+  roofGroup.visible = id === 'all' || id === 'F3' || id === FOURTH_FLOOR.id;
   levelButtons.forEach((b) => b.classList.toggle('active', b.dataset.level === id));
-  const lv = BUILDING.floors.find((f) => f.id === id);
+  const lv = BUILDING.floors.find((f) => f.id === id)
+    || (id === FOURTH_FLOOR.id ? fourth.group.userData.level : null);
+  const area = lv && lv.area ? `${lv.area.toLocaleString()} sq ft · ` : '';
   document.getElementById('levelInfo').innerHTML = lv
-    ? `<strong>${lv.name}</strong><span>${lv.rooms}</span><span>${lv.area.toLocaleString()} sq ft · floor level ${lv.base.toFixed(1)} ft</span>`
+    ? `<strong>${lv.name}</strong><span>${lv.rooms}</span><span>${area}floor level ${lv.base.toFixed(1)} ft</span>`
     : `<strong>Full building</strong><span>Ground + 3 floors · ${BUILDING.floors.reduce((s, f) => s + f.area, 0).toLocaleString()} sq ft built-up</span><span>Ridge height ≈ ${(BUILDING.roofBase + BUILDING.parapet + 0.9).toFixed(0)} ft above plinth</span>`;
 }
 setLevel('all');

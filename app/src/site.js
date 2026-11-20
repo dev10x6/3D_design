@@ -76,10 +76,10 @@ export function buildSite(mats) {
   addWall(PLOT.frontWidth, F, PLOT.frontWidth + (halfRear - halfFront), 0); // east
   addWall(-(halfRear - halfFront), 0, PLOT.frontWidth + (halfRear - halfFront), 0); // rear
 
-  // gate piers
+  // gate piers, standing in the front wall either side of the opening
   for (const gx of [dw + 1.5, PLOT.frontWidth - 4.5]) {
     const p = new THREE.Mesh(new THREE.BoxGeometry(1.4, wh + 1.4, 1.4), wallMat);
-    p.position.set(gx, (wh + 1.4) / 2, 0);
+    p.position.set(gx, (wh + 1.4) / 2, F);
     p.castShadow = true; p.receiveShadow = true;
     site.add(p);
   }
@@ -88,34 +88,37 @@ export function buildSite(mats) {
   for (const side of [-1, 1]) {
     const gw = 2.0;
     const leaf = new THREE.Mesh(new THREE.BoxGeometry(gw, wh - 0.4, 0.12), gateMat);
-    leaf.position.set(dw + 1.5 + 0.9 + gw / 2 + (side > 0 ? gw : 0), (wh - 0.4) / 2, 0);
+    leaf.position.set(dw + 1.5 + 0.9 + gw / 2 + (side > 0 ? gw : 0), (wh - 0.4) / 2, F);
     site.add(leaf);
   }
 
   // ---------- Rear garden ----------
+  // The rear is at z=0, behind the building and away from the street.
   const garden = new THREE.Mesh(
     new THREE.PlaneGeometry(halfRear * 1.4, 8),
     new THREE.MeshStandardMaterial({ color: 0x6d7d4c, roughness: 1 }),
   );
   garden.rotation.x = -Math.PI / 2;
-  garden.position.set(PLOT.frontWidth / 2, 0.24, PLOT.depth - 5);
+  garden.position.set(PLOT.frontWidth / 2, 0.24, 5);
   garden.receiveShadow = true;
   site.add(garden);
 
   // ---------- Road in front ----------
+  // The street runs along the front facade, past C1/C2/C3, so it sits beyond
+  // the front wall at +Z. Nothing is placed behind the rear wall.
   const road = new THREE.Mesh(
     new THREE.PlaneGeometry(320, 24),
     new THREE.MeshStandardMaterial({ color: 0x565a5e, roughness: 1 }),
   );
   road.rotation.x = -Math.PI / 2;
-  road.position.set(PLOT.frontWidth / 2, 0.02, -13);
+  road.position.set(PLOT.frontWidth / 2, 0.02, F + 13);
   road.receiveShadow = true;
   site.add(road);
   const kerb = new THREE.Mesh(
     new THREE.BoxGeometry(320, 0.45, 1.2),
     new THREE.MeshStandardMaterial({ color: 0xbdb6a9, roughness: 0.9 }),
   );
-  kerb.position.set(PLOT.frontWidth / 2, 0.22, -1.4);
+  kerb.position.set(PLOT.frontWidth / 2, 0.22, F + 1.4);
   kerb.receiveShadow = true;
   site.add(kerb);
 

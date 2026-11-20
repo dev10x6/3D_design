@@ -132,6 +132,30 @@ and default to collapsed so the model is not buried. `#corner` has no fixed
 `bottom` because it is stacked above `#sun`, whose height changes as it
 collapses — `stackCornerPanel()` measures it on resize and on every toggle.
 
+A collapsed panel shows a glyph plus the toggle and nothing else: the
+`.ph-icon` SVG in the header, the title hidden but left in the accessibility
+tree, and `width: auto` so the panel shrinks to those two elements instead of
+keeping the width it needs when open. If you add a panel, give it a `.ph-icon`
+and add its id to that `width: auto` rule, or it will collapse to a wide bar
+with a lonely icon in the corner.
+
+The fourth floor (`fourth.js`) is a concept, not part of the drawing set: the
+PDF stops at the third floor. It is built as its own level group appended to
+`building.userData.floorGroups` rather than as a `BUILDING.floors` entry, so it
+cannot shift the floor count, the built-up area total or `roofDatum()`, which
+`corner.js` and the roof extensions all depend on. Its plan comes from
+`fourthFloorRects()`, which takes the bounding rectangle of pillars C28, C29,
+C31 and C32 plus an arm cantilevered forward; that is the only thing fixing
+where it can land, since there is no drawing to measure. Do not fold it into
+`BUILDING.floors` — the roof would then be recalculated one storey too high.
+
+Site furniture has to follow the `+Z` front: the road, kerb, gate piers and
+gate leaves all sit at the front wall (`PLOT.depth`), and the garden is behind
+the rear wall at low `z`. An earlier orientation flip moved the boundary walls
+but left the road and gate at `z=0`, so they ended up behind the building and
+the gate hung in a wall that had no opening. If the model is ever turned round
+again, move all of them together.
+
 Pillar tags are canvas sprites from `labelSprite()`, one per ground column,
 built in the `GF` branch and toggled by "Show pillar names". Size them by
 `worldHeight` in feet, not by a fraction of the canvas: the sprite scale is a
