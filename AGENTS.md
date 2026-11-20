@@ -63,17 +63,23 @@ floor. Each slab sits flush with the top of the roof over that level and starts
 at that slab's outer edge; keep it that way, or the extension will z-fight with
 the roof it abuts.
 
-The corner treatment is separate: `CORNER_FRAME` holds the dimensions and
-`CORNER_STYLES` the two finish palettes, while `app/src/corner.js` builds it.
-`buildCorner(style)` returns one group per level plus a roof cap, and `main.js`
-parents those into the existing level groups so isolation works. The frame wraps
-the front-west corner: its south face runs outside the 4'-0" balcony rather than
-the wall, so `BALCONY_OUT` in `corner.js` is the reference edge there, and its
-inner face stops 0.01 outside the 0.25 slab overhang to stay off coplanar faces.
-Add a new finish by adding a palette to `CORNER_STYLES` and branching in
-`frameFloor()`; do not hard-code colours in `corner.js`.
+The corner box is separate: `CORNER_FRAME` holds its level, corner and finish
+and `CORNER_STYLES` the two palettes, while `app/src/corner.js` builds it.
+`buildCorner(style)` returns a single group, and `main.js` parents it into that
+level's group so level isolation hides it with the floor. There is no roof cap
+of its own.
 
-The UI can restrict which storeys carry the frame (`CORNER_SPANS` in
-`main.js`). `applyCornerStyle()` rebuilds the frame on every change and drops
-the levels outside the current span, so a style switch never resurrects a
-hidden storey and never leaves a duplicate group behind.
+The box is tied to `ROOF_EXTENSIONS`: `footprint()` looks up the extension
+matching `CORNER_FRAME.level` / `CORNER_FRAME.from` and reuses its 2 ft
+footprint, and the box stands on that extension's slab top. The slab is both its
+floor and its eave, so moving the box means editing the extension, not the box.
+Changing the level or corner without a matching extension throws rather than
+silently building in the wrong place.
+
+Add a new finish by adding a palette to `CORNER_STYLES` and branching in
+`buildBox()`; do not hard-code colours in `corner.js`.
+
+The ground floor is deliberately unfinished: open structure with the stilt
+columns plus the staircase and lift enclosures, and no perimeter walls or rooms
+yet. Do not add walls back to the `level.id === 'GF'` branch without checking
+with the owner — the plans show rooms there, but the building is not built out.

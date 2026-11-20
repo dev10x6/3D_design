@@ -247,21 +247,24 @@ export function buildBuilding(mats) {
     box(g, 0.12, 7.2, 3.4, LIFT.x0 - 0.06, y0 + 3.6, lcz, mats.metal);
 
     if (level.id === 'GF') {
-      // Ground floor: enclosed rooms up to 67'-4", then open stilt parking
-      // under the upper floors, carried on columns.
-      const frontDepth = BUILDING.groundDepth;
-
-      buildWall(g, { axis: 'x', origin: { x: 0, z: 0 }, length: W, height: h, openings: ops.front, y0, mats });
-      buildWall(g, { axis: 'z', origin: { x: 0, z: 0 }, length: frontDepth, height: h, openings: ops.west, y0, mats });
-      buildWall(g, { axis: 'z', origin: { x: W, z: 0 }, length: frontDepth, height: h, openings: ops.east, y0, mats });
-      // rear wall of the front block, with two doors onto the parking bay
-      buildWall(g, { axis: 'x', origin: { x: 0, z: frontDepth }, length: W, height: h, openings: ops.rear, y0, mats });
-
+      // Ground floor is still open structure: no rooms built yet. Only the
+      // columns carrying the floors above, plus the staircase and lift
+      // enclosures, which are the two things that already exist.
       for (const z of STILT_COLUMNS.zs) {
         for (const x of STILT_COLUMNS.xs) {
           box(g, 1.1, h, 1.1, x, y0 + h / 2, z, mats.concrete);
         }
       }
+
+      // Staircase enclosure: three walls, open at the front for access.
+      const sw = STAIR.x1 - STAIR.x0;
+      const sd = STAIR.z1 - STAIR.z0;
+      const st = 0.45;
+      box(g, sw, h, st, STAIR.x0 + sw / 2, y0 + h / 2, STAIR.z0 + st / 2, mats.plasterShade);
+      box(g, sw, h, st, STAIR.x0 + sw / 2, y0 + h / 2, STAIR.z1 - st / 2, mats.plasterShade);
+      box(g, st, h, sd, STAIR.x0 + st / 2, y0 + h / 2, STAIR.z0 + sd / 2, mats.plasterShade);
+      box(g, st, h, sd, STAIR.x1 - st / 2, y0 + h / 2, STAIR.z0 + sd / 2, mats.plasterShade);
+
       box(g, W + 1.0, 0.4, D + 1.0, W / 2, y0 + h - 0.2, D / 2, mats.coping);
     } else {
       buildWall(g, { axis: 'x', origin: { x: 0, z: 0 }, length: W, height: h, openings: ops.front, y0, mats });

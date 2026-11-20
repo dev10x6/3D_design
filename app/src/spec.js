@@ -9,8 +9,9 @@
 //   +Y -> up
 //
 // Measured envelope: 27'-1" wide (27.1) x 90'-1" deep (90.1).
-// Ground floor is enclosed to 56'-6" (56.5); behind that is open stilt
-// parking carried on columns, with the upper floors spanning over it.
+// The plans show rooms across the ground floor, but only the stilt columns and
+// the staircase and lift enclosures are actually built; the ground floor is
+// modelled as open structure to match.
 
 // Plot 33'-0" front / 35'-0" rear x 100'-0" deep. The drawings dimension the
 // setbacks as 3'-0" at each side and 5'-0" front and rear, which leaves a
@@ -31,7 +32,6 @@ export const BUILDING = {
   offsetZ: PLOT.frontSetback,
   width: 27.1,
   depth: 90.1,
-  groundDepth: 56.5,
   wallT: 0.75,
   floors: [
     { id: 'GF', name: 'Ground Floor', base: 1.5, height: 11, area: 2004,
@@ -69,12 +69,6 @@ const EAST_UPPER = [
 ];
 
 export const OPENINGS = {
-  GF: {
-    front: [win(2.3, 7.3), win(18.8, 23.8)],
-    rear: [door(2.0, 5.6), door(18.8, 22.4)],
-    west: [vent(7.4, 9.4), vent(14.4, 16.4)],
-    east: [win(4.4, 9.4)],
-  },
   F1: { front: FRONT_UPPER, rear: REAR_UPPER, west: WEST_UPPER, east: EAST_UPPER },
   F2: { front: FRONT_UPPER, rear: REAR_UPPER, west: WEST_UPPER, east: EAST_UPPER },
   F3: { front: FRONT_UPPER, rear: REAR_UPPER, west: WEST_UPPER, east: EAST_UPPER },
@@ -118,28 +112,24 @@ export const ROOF_EXTENSIONS = [
 ];
 
 export const LIFT = { x0: 24.6, x1: 29.9, z0: 41.7, z1: 48.2 };
+
 export const STAIR = { x0: 10.0, x1: 20.6, z0: 38.9, z1: 50.6 };
 
-// Corner treatment. A 2'-0" L-shaped cantilever frame wraps the front-west
-// corner, framing Bedroom-1 (12'-6" x 12'-0") and the 4'-0" front balcony.
-// It rises from the first-floor slab to the roof parapet; each floor gets a
-// band, and the roof gets the parapet cap.
+// Corner treatment. A 2'-0" L-shaped cantilevered box wraps the front-east
+// corner on the third floor only, turning the two perpendicular faces there.
+// It hangs under the third-floor front-east roof extension and repeats that
+// extension's footprint exactly, so the 2 ft projection reads as one move.
 //
-//   armX - how far the frame runs east along the front facade from the west
-//          wall, i.e. across Bedroom-1 (its 12'-6" clear width plus walls)
-//   armZ - how far it runs north up the west facade, i.e. past the front
-//          balcony (4'-0") and the bedroom
-//   depth - the projection of the frame past the wall face
-//   style - which finish to apply: 'wood' or 'darkBox'
+//   level  - the storey the box occupies
+//   from   - which corner it turns; must match a ROOF_EXTENSIONS entry
+//   style  - which finish to apply: 'wood' or 'darkBox'
 export const CORNER_FRAME = {
+  level: 'F3',
+  from: 'frontEast',
   style: 'wood',
-  armX: 13.5,
-  armZ: 17.0,
-  depth: 2.0,
-  fromLevel: 'F1',
-  toLevel: 'F3',
-  planterDepth: 1.4,
-  planterHeight: 1.5,
+  height: 8.0,
+  planterDepth: 1.2,
+  planterHeight: 1.4,
 };
 
 // Finish palettes for the two corner treatments, transcribed from the two
