@@ -118,3 +118,11 @@ import map entry or a vendored file, update that mapping or the check fails.
 `.vercelignore` keeps the source PDF and the dev notes out of the deploy. Add
 anything else that is source material rather than site content there, not to
 `.gitignore`, since it should stay in the repo.
+
+Live project: `3d-design` on Vercel team `tenx5`
+(`prj_Fpa5haU3U8NNxe1CgkzYZ432PQbF`, org `team_uRp6sWQQAfTjJMJmfJzWR71E`),
+served at https://3d-design-puce.vercel.app. The three IDs are also stored as
+repository secrets, so the GitHub workflow deploys without local setup.
+`vercel link` writes `.vercel/` and `.env.local` (a short-lived OIDC token);
+both are gitignored and both are in `.vercelignore`, so they never reach a
+deployment.
