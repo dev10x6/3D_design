@@ -55,3 +55,10 @@ result survives the sandbox being torn down.
 `app/src/spec.js` is the single source of truth for every dimension; the
 geometry, camera framing and level readouts all derive from it. Change a
 number there rather than in `building.js` or `main.js`.
+
+Roof eaves added by the revised design live in `ROOF_EXTENSIONS` (also in
+`spec.js`) and are built by `roofExtension()` in `building.js`. They attach to
+the level group named by `level`, so level isolation hides them with their
+floor. Each slab sits flush with the top of the roof over that level and starts
+at that slab's outer edge; keep it that way, or the extension will z-fight with
+the roof it abuts.

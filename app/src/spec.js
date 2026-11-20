@@ -109,7 +109,8 @@ export const BALCONIES = {
 //   from  - corner the extension starts at: 'frontEast' or 'rearEast'
 //   armX  - length along the facade, measured westwards from the east wall
 //   armZ  - length along the east wall, measured away from the facade
-// The 2 ft depth is measured outwards from the building envelope.
+// `depth` is measured outwards from the roof slab edge, not the wall face,
+// so the eave adds to the roof that is already there.
 export const ROOF_EXTENSIONS = [
   { level: 'F2', from: 'frontEast', depth: 2.0, armX: 13.5, armZ: 17.0 },
   { level: 'F3', from: 'frontEast', depth: 2.0, armX: 27.1, armZ: 17.0 },
