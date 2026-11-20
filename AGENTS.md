@@ -62,3 +62,13 @@ the level group named by `level`, so level isolation hides them with their
 floor. Each slab sits flush with the top of the roof over that level and starts
 at that slab's outer edge; keep it that way, or the extension will z-fight with
 the roof it abuts.
+
+The corner treatment is separate: `CORNER_FRAME` holds the dimensions and
+`CORNER_STYLES` the two finish palettes, while `app/src/corner.js` builds it.
+`buildCorner(style)` returns one group per level plus a roof cap, and `main.js`
+parents those into the existing level groups so isolation works. The frame wraps
+the front-west corner: its south face runs outside the 4'-0" balcony rather than
+the wall, so `BALCONY_OUT` in `corner.js` is the reference edge there, and its
+inner face stops 0.01 outside the 0.25 slab overhang to stay off coplanar faces.
+Add a new finish by adding a palette to `CORNER_STYLES` and branching in
+`frameFloor()`; do not hard-code colours in `corner.js`.

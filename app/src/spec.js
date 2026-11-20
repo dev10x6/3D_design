@@ -120,5 +120,58 @@ export const ROOF_EXTENSIONS = [
 export const LIFT = { x0: 24.6, x1: 29.9, z0: 41.7, z1: 48.2 };
 export const STAIR = { x0: 10.0, x1: 20.6, z0: 38.9, z1: 50.6 };
 
+// Corner treatment. A 2'-0" L-shaped cantilever frame wraps the front-west
+// corner, framing Bedroom-1 (12'-6" x 12'-0") and the 4'-0" front balcony.
+// It rises from the first-floor slab to the roof parapet; each floor gets a
+// band, and the roof gets the parapet cap.
+//
+//   armX - how far the frame runs east along the front facade from the west
+//          wall, i.e. across Bedroom-1 (its 12'-6" clear width plus walls)
+//   armZ - how far it runs north up the west facade, i.e. past the front
+//          balcony (4'-0") and the bedroom
+//   depth - the projection of the frame past the wall face
+//   style - which finish to apply: 'wood' or 'darkBox'
+export const CORNER_FRAME = {
+  style: 'wood',
+  armX: 13.5,
+  armZ: 17.0,
+  depth: 2.0,
+  fromLevel: 'F1',
+  toLevel: 'F3',
+  planterDepth: 1.4,
+  planterHeight: 1.5,
+};
+
+// Finish palettes for the two corner treatments, transcribed from the two
+// reference renders.
+export const CORNER_STYLES = {
+  wood: {
+    name: 'Warm wood & planters',
+    cladding: 0x9a6a3f,
+    claddingDark: 0x7a512f,
+    wall: 0x3d3128,
+    stone: 0xbdae96,
+    soffit: 0x8a5c34,
+    planter: 0x4a4136,
+    foliage: 0x4f7a3a,
+    frame: 0xf2efe8,
+    rail: 0x2b2f33,
+    glass: 0x1e2a2e,
+  },
+  darkBox: {
+    name: 'Dark monolithic box',
+    cladding: 0x3f3228,
+    claddingDark: 0x2e241c,
+    wall: 0xf4f2ed,
+    stone: 0xe8e2d6,
+    soffit: 0x372c23,
+    planter: 0x4a4136,
+    foliage: 0x466b36,
+    frame: 0xe9e5dc,
+    rail: 0x1e2124,
+    glass: 0x203034,
+  },
+};
+
 // Columns carrying the upper floors over the open stilt-parking bay.
 export const STILT_COLUMNS = { xs: [2.0, 13.6, 25.1], zs: [61.0, 72.0, 83.0, 89.6] };

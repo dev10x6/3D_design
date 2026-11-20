@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { BUILDING, PLOT } from './spec.js';
+import { BUILDING, PLOT, CORNER_FRAME } from './spec.js';
 import { buildBuilding, makeMaterials } from './building.js';
+import { buildCorner } from './corner.js';
 import { buildSite } from './site.js';
 
 const canvas = document.getElementById('scene');
@@ -70,6 +71,25 @@ const mats = makeMaterials();
 const site = buildSite(mats);
 const building = buildBuilding(mats);
 scene.add(site, building);
+
+// ---------- Corner frame ----------
+// Lives inside the per-level groups so level isolation hides it with its
+// floor; the roof cap follows the roof group.
+let corner = null;
+function applyCornerStyle(style) {
+  if (corner) {
+    for (const g of Object.values(corner.levels)) g.parent?.remove(g);
+    corner.roof.parent?.remove(corner.roof);
+  }
+  corner = buildCorner(style);
+  for (const [id, g] of Object.entries(corner.levels)) {
+    const host = building.userData.floorGroups[id];
+    g.visible = host.visible;
+    host.add(g);
+  }
+  building.getObjectByName('roof').add(corner.roof);
+  corner.roof.visible = building.getObjectByName('roof').visible;
+}
 
 // ---------- Controls ----------
 const controls = new OrbitControls(persp, renderer.domElement);
@@ -254,7 +274,8 @@ const levelButtons = document.querySelectorAll('[data-level]');
 function setLevel(id) {
   const groups = building.userData.floorGroups;
   for (const [key, g] of Object.entries(groups)) g.visible = id === 'all' || key === id;
-  building.getObjectByName('roof').visible = id === 'all' || id === 'F3';
+  const roofGroup = building.getObjectByName('roof');
+  roofGroup.visible = id === 'all' || id === 'F3';
   levelButtons.forEach((b) => b.classList.toggle('active', b.dataset.level === id));
   const lv = BUILDING.floors.find((f) => f.id === id);
   document.getElementById('levelInfo').innerHTML = lv
@@ -266,6 +287,21 @@ setLevel('all');
 // ---------- UI ----------
 document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => flyTo(b.dataset.view)));
 levelButtons.forEach((b) => b.addEventListener('click', () => setLevel(b.dataset.level)));
+
+const cornerButtons = document.querySelectorAll('[data-corner]');
+cornerButtons.forEach((b) => b.addEventListener('click', () => {
+  const style = b.dataset.corner;
+  cornerButtons.forEach((o) => o.classList.toggle('active', o === b));
+  if (style === 'none') {
+    for (const g of Object.values(corner.levels)) g.visible = false;
+    corner.roof.visible = false;
+  } else {
+    applyCornerStyle(style);
+    setLevel(document.querySelector('[data-level].active').dataset.level);
+  }
+}));
+applyCornerStyle(CORNER_FRAME.style);
+setLevel('all');
 
 const azEl = document.getElementById('sunAz');
 const elEl = document.getElementById('sunEl');
@@ -395,4 +431,4 @@ function tick() {
 }
 tick();
 
-window.__viewer = { scene, persp, ortho, renderer, controls, building, site, flyTo, setLevel, get camera() { return camera; } };
+window.__viewer = { scene, persp, ortho, renderer, controls, building, site, flyTo, setLevel, applyCornerStyle, get corner() { return corner; }, get camera() { return camera; } };
