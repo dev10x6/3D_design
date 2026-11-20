@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import { BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, GROUND_COLUMNS, ROOF_EXTENSIONS, FRONT_Z } from './spec.js';
+import {
+  BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, GROUND_COLUMNS, ROOF_EXTENSIONS, FRONT_Z,
+  EAVE_FASCIA, roofDatum, extensionRects, fourthFloorRects,
+} from './spec.js';
 
 const T = BUILDING.wallT;
 
@@ -208,58 +211,6 @@ function balcony(parent, b, level, mats) {
   parent.add(g);
 }
 
-// Floor slabs project W + 0.5 and the main roof slab W + 1.2 past the wall
-// face. Roof extensions continue outwards from that edge.
-const SLAB_OVERHANG = 0.25;
-const ROOF_SLAB_OVERHANG = 0.6;
-
-// Depth of the fascia band hanging under an eave's outer edge. Anything built
-// beneath an extension has to clear it.
-export const EAVE_FASCIA = 0.45;
-
-// The roof over a level: the slab of the floor above, or the main roof slab
-// for the top floor. Extensions are placed flush with its top face and start
-// at its outer edge, so nothing is coplanar.
-function roofDatum(levelId) {
-  const i = BUILDING.floors.findIndex((f) => f.id === levelId);
-  const next = BUILDING.floors[i + 1];
-  if (next) return { y: next.base, overhang: SLAB_OVERHANG };
-  return { y: BUILDING.roofBase + 0.7, overhang: ROOF_SLAB_OVERHANG };
-}
-
-/**
- * An L-shaped eaves slab `depth` wide added to the roof of a level, turning one
- * corner. `from` names it: 'frontEast', 'frontWest', 'rearEast' or 'rearWest'.
- * `armX` runs along the facade from the side wall, `armZ` runs along that side
- * wall away from the facade.
- *
- * The two rectangles are returned so the corner box can be built on exactly the
- * same plan instead of recomputing it.
- */
-export function extensionRects(ext) {
-  const W = BUILDING.width;
-  const D = BUILDING.depth;
-  const { depth, armX, armZ } = ext;
-  const front = ext.from.startsWith('front');
-  const east = ext.from.endsWith('East');
-  const { overhang: ov } = roofDatum(ext.level);
-  const span = (a, b) => (a < b ? [a, b] : [b, a]);
-
-  // Band along the facade, sitting outside it.
-  const [bz0, bz1] = front ? span(D + ov, D + ov + depth) : span(-ov - depth, -ov);
-  const [bx0, bx1] = east ? span(W - armX, W + ov + depth) : span(-ov - depth, armX);
-
-  // Arm down the side wall, starting where the band ends.
-  const [az0, az1] = front ? span(D + ov - armZ, D + ov) : span(-ov, -ov + armZ);
-  const [ax0, ax1] = east ? span(W + ov, W + ov + depth) : span(-ov - depth, -ov);
-
-  return {
-    front, east, overhang: ov, depth,
-    band: { x0: bx0, x1: bx1, z0: bz0, z1: bz1 },
-    arm: { x0: ax0, x1: ax1, z0: az0, z1: az1 },
-  };
-}
-
 function roofExtension(parent, ext, mats) {
   const t = BUILDING.slabT;
   const { y: top } = roofDatum(ext.level);
@@ -375,15 +326,35 @@ export function buildBuilding(mats) {
   const pw = 0.6;
   const ph = BUILDING.parapet;
   const py = rb + 0.7 + ph / 2;
-  box(roof, W + 1.0, ph, pw, W / 2, py, D + 0.1, mats.plaster);
-  box(roof, W + 1.0, ph, pw, W / 2, py, -0.1, mats.plaster);
-  box(roof, pw, ph, D + 0.6, -0.1, py, D / 2, mats.plaster);
-  box(roof, pw, ph, D + 0.6, W + 0.1, py, D / 2, mats.plaster);
   const cy2 = rb + 0.7 + ph + 0.11;
+
+  // The fourth-floor room stands on the rear-west corner of this roof, so the
+  // parapet and its capping run only where the roof is still open terrace.
+  const room = fourthFloorRects();
+  const open = {
+    rear: { from: room.band.x1, to: W + 0.5 },
+    west: { from: room.arm.z1, to: D + 0.5 },
+  };
+  const run = (a, b) => {
+    const len = b - a;
+    return len <= 0.05 ? null : { len, mid: (a + b) / 2 };
+  };
+
+  box(roof, W + 1.0, ph, pw, W / 2, py, D + 0.1, mats.plaster);
+  box(roof, pw, ph, D + 0.6, W + 0.1, py, D / 2, mats.plaster);
   box(roof, W + 1.3, 0.22, pw + 0.35, W / 2, cy2, D + 0.1, mats.coping);
-  box(roof, W + 1.3, 0.22, pw + 0.35, W / 2, cy2, -0.1, mats.coping);
-  box(roof, pw + 0.35, 0.22, D + 0.6, -0.1, cy2, D / 2, mats.coping);
   box(roof, pw + 0.35, 0.22, D + 0.6, W + 0.1, cy2, D / 2, mats.coping);
+
+  const rearRun = run(open.rear.from, open.rear.to);
+  if (rearRun) {
+    box(roof, rearRun.len, ph, pw, rearRun.mid, py, -0.1, mats.plaster);
+    box(roof, rearRun.len, 0.22, pw + 0.35, rearRun.mid, cy2, -0.1, mats.coping);
+  }
+  const westRun = run(open.west.from, open.west.to);
+  if (westRun) {
+    box(roof, pw, ph, westRun.len, -0.1, py, westRun.mid, mats.plaster);
+    box(roof, pw + 0.35, 0.22, westRun.len, -0.1, cy2, westRun.mid, mats.coping);
+  }
 
   const sw = STAIR.x1 - STAIR.x0 + 2;
   const sd = STAIR.z1 - STAIR.z0 + 2;

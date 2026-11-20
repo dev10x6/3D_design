@@ -167,14 +167,19 @@
        five headers fit on a phone at once and the model stays visible. */
     #dock {
       display: flex; position: fixed; left: 8px; right: 8px; bottom: 8px;
-      z-index: 5; flex-direction: column; gap: 8px;
-      max-height: 52vh; overflow-y: auto; overscroll-behavior: contain;
+      z-index: 5; flex-direction: row; flex-wrap: wrap; align-items: flex-start;
+      gap: 8px; max-height: 52vh; overflow-y: auto; overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
+    /* Collapsed panels are pills that sit side by side; the open one takes the
+       full width of the sheet. Without this the dock stretched every panel to
+       full width and a collapsed one became a wide bar with the glyph stranded
+       at the far end. */
     #dock .panel {
-      position: static; width: auto; padding: 9px 10px;
+      position: static; flex: 1 1 100%; padding: 9px 10px;
       border-radius: 13px;
     }
+    #dock .panel.collapsed { flex: 0 0 auto; }
     #dock .grid { grid-template-columns: repeat(3, 1fr); gap: 5px; }
     #dock .grid.one { grid-template-columns: 1fr; }
     #dock .grp-label { margin-bottom: 6px; }

@@ -143,11 +143,26 @@ The fourth floor (`fourth.js`) is a concept, not part of the drawing set: the
 PDF stops at the third floor. It is built as its own level group appended to
 `building.userData.floorGroups` rather than as a `BUILDING.floors` entry, so it
 cannot shift the floor count, the built-up area total or `roofDatum()`, which
-`corner.js` and the roof extensions all depend on. Its plan comes from
-`fourthFloorRects()`, which takes the bounding rectangle of pillars C28, C29,
-C31 and C32 plus an arm cantilevered forward; that is the only thing fixing
-where it can land, since there is no drawing to measure. Do not fold it into
+`corner.js` and the roof extensions all depend on. Do not fold it into
 `BUILDING.floors` — the roof would then be recalculated one storey too high.
+
+It stands on the third-floor rear-west eave, named by `FOURTH_FLOOR.from` /
+`floorLevel` exactly as in `ROOF_EXTENSIONS`, so the room and the eave cannot
+drift apart. `fourthFloorRects()` takes the outer corner and the forward reach
+from that eave and the far edges from the pillars it lands on (C28, C31, C32).
+An eave alone is 2 ft deep and could not hold a room; the floor is the eave plus
+the roof slab behind it, which is why the plan runs inwards from the eave's
+outer edge rather than sitting on the eave alone.
+
+Because the room stands on the roof, `building.js` stops the roof parapet and
+its capping where the room covers them — see the `open.rear` / `open.west` runs.
+The forward arm is capped at 6.5 ft so it clears the water tank at x=6.5.
+
+`roofDatum()` and `extensionRects()` live in `spec.js`, not `building.js`: the
+fourth floor needs them and importing from `building.js` would drag in `three`
+and the whole geometry layer. `building.js` and `corner.js` both import them
+from spec. Do not reintroduce local copies — there were two, and they had
+already drifted.
 
 Site furniture has to follow the `+Z` front: the road, kerb, gate piers and
 gate leaves all sit at the front wall (`PLOT.depth`), and the garden is behind

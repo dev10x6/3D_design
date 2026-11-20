@@ -1,6 +1,8 @@
 import * as THREE from 'three';
-import { BUILDING, OPENINGS, BALCONIES, CORNER_FRAME, CORNER_STYLES, ROOF_EXTENSIONS } from './spec.js';
-import { extensionRects, EAVE_FASCIA } from './building.js';
+import {
+  BUILDING, OPENINGS, BALCONIES, CORNER_FRAME, CORNER_STYLES, ROOF_EXTENSIONS,
+  EAVE_FASCIA, roofDatum, extensionRects,
+} from './spec.js';
 
 const FASCIA_H = EAVE_FASCIA;
 
@@ -28,14 +30,6 @@ function box(parent, w, h, d, x, y, z, mat) {
 
 const rect = (parent, r, y, h, mat) =>
   box(parent, r.x1 - r.x0, h, r.z1 - r.z0, (r.x0 + r.x1) / 2, y, (r.z0 + r.z1) / 2, mat);
-
-// The roof over a level, mirroring building.js.
-function roofDatum(levelId) {
-  const i = BUILDING.floors.findIndex((f) => f.id === levelId);
-  const next = BUILDING.floors[i + 1];
-  if (next) return { y: next.base, overhang: 0.25 };
-  return { y: BUILDING.roofBase + 0.7, overhang: 0.6 };
-}
 
 function extensionFor(level) {
   const ext = ROOF_EXTENSIONS.find(

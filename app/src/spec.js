@@ -101,11 +101,11 @@ export const BALCONIES = {
 };
 
 // Roof extensions (revised design). Each entry adds a 2 ft deep L-shaped
-// eaves slab at the roof of the named level, turning the east corner:
+// eaves slab at the roof of the named level, turning one corner:
 //   from  - corner the extension turns: 'frontEast', 'frontWest', 'rearEast'
 //           or 'rearWest'
-//   armX  - length along the facade, measured westwards from the east wall
-//   armZ  - length along the east wall, measured away from the facade
+//   armX  - length along the facade, measured from that side wall
+//   armZ  - length along that side wall, measured away from the facade
 // `depth` is measured outwards from the roof slab edge, not the wall face,
 // so the eave adds to the roof that is already there.
 // The front eaves cover only half the facade - the half over the balcony they
@@ -113,55 +113,125 @@ export const BALCONIES = {
 export const ROOF_EXTENSIONS = [
   { level: 'F2', from: 'frontWest', depth: 2.0, armX: 13.55, armZ: 17.0 },
   { level: 'F3', from: 'frontWest', depth: 2.0, armX: 13.55, armZ: 17.0 },
-  { level: 'F3', from: 'rearEast', depth: 2.0, armX: 27.1, armZ: 17.0 },
+  // The rear eave turns the west corner so it sits over C28, C31 and C32, and
+  // runs far enough forward down the west wall to carry the fourth-floor arm.
+  { level: 'F3', from: 'rearWest', depth: 2.0, armX: 14.0, armZ: 26.0 },
 ];
 
+// Floor slabs project W + 0.5 and the main roof slab W + 1.2 past the wall
+// face. Roof extensions continue outwards from that edge.
+const SLAB_OVERHANG = 0.25;
+const ROOF_SLAB_OVERHANG = 0.6;
+
+// Depth of the fascia band hanging under an eave's outer edge. Anything built
+// beneath an extension has to clear it.
+export const EAVE_FASCIA = 0.45;
+
+// The roof over a level: the slab of the floor above, or the main roof slab
+// for the top floor. Extensions are placed flush with its top face and start
+// at its outer edge, so nothing is coplanar.
+export function roofDatum(levelId) {
+  const i = BUILDING.floors.findIndex((f) => f.id === levelId);
+  const next = BUILDING.floors[i + 1];
+  if (next) return { y: next.base, overhang: SLAB_OVERHANG };
+  return { y: BUILDING.roofBase + 0.7, overhang: ROOF_SLAB_OVERHANG };
+}
+
+/**
+ * An L-shaped eaves slab `depth` wide added to the roof of a level, turning one
+ * corner. `from` names it: 'frontEast', 'frontWest', 'rearEast' or 'rearWest'.
+ * `armX` runs along the facade from the side wall, `armZ` runs along that side
+ * wall away from the facade.
+ *
+ * The two rectangles are returned so the corner box and the fourth floor can be
+ * built on exactly the same plan instead of recomputing it.
+ */
+export function extensionRects(ext) {
+  const W = BUILDING.width;
+  const D = BUILDING.depth;
+  const { depth, armX, armZ } = ext;
+  const front = ext.from.startsWith('front');
+  const east = ext.from.endsWith('East');
+  const { overhang: ov } = roofDatum(ext.level);
+  const span = (a, b) => (a < b ? [a, b] : [b, a]);
+
+  // Band along the facade, sitting outside it.
+  const [bz0, bz1] = front ? span(D + ov, D + ov + depth) : span(-ov - depth, -ov);
+  const [bx0, bx1] = east ? span(W - armX, W + ov + depth) : span(-ov - depth, armX);
+
+  // Arm down the side wall, starting where the band ends.
+  const [az0, az1] = front ? span(D + ov - armZ, D + ov) : span(-ov, -ov + armZ);
+  const [ax0, ax1] = east ? span(W + ov, W + ov + depth) : span(-ov - depth, -ov);
+
+  return {
+    front, east, overhang: ov, depth,
+    band: { x0: bx0, x1: bx1, z0: bz0, z1: bz1 },
+    arm: { x0: ax0, x1: ax1, z0: az0, z1: az1 },
+  };
+}
+
 // Fourth-floor concept. This room is not on the drawings - it is a proposed
-// future addition, so nothing here is measured; it is derived from the ground
-// pillar grid instead, which is the only thing that fixes where it can land.
+// future addition, so there is nothing to measure on the plan.
 //
-// The room sits on the roof over the third floor, in the rear-west corner, and
-// is L-shaped: a deep band over the four pillars, plus an arm cantilevered
-// forward from it down the west side. The band is the pillars' own bounding
-// rectangle, so the whole loaded part of the room sits over C28, C29, C31 and
-// C32 and nothing is carried by slab bending. The arm reaches past them and is
-// the cantilever - that is what turns the band into an L.
+// It is built on the third-floor rear eave: the eave is the slab under the
+// room's outer edge, and the roof slab behind it is the rest of the floor. So
+// the room's outer faces line up with the eave's outer edge and the plan runs
+// inwards from there over the roof - an eave on its own is 2 ft deep and could
+// not hold a room, but an eave plus the roof behind it can.
 //
-// `armLength` and `armWidth` are free choices, not measurements. `eave` is the
-// same 2 ft cantilevered eave the front-west corner uses, turned outward along
-// the free edges of the L.
+// `from` and `floorLevel` name the eave, exactly as in ROOF_EXTENSIONS, so the
+// room and the eave cannot drift apart. `armWidth` is how far the forward arm
+// reaches in from the west edge; `height` and `wallT` are the only other
+// invented numbers.
 export const FOURTH_FLOOR = {
   id: 'F4',
   name: 'Fourth Floor (concept)',
-  base: BUILDING.roofBase + 0.7,
+  from: 'rearWest',
+  floorLevel: 'F3',
   height: 10.5,
   wallT: 0.6,
-  eave: 2.0,
-  armLength: 12.0,
-  armWidth: 7.0,
-  pillars: ['C28', 'C31', 'C32', 'C29'],
+  // Kept under 6.6 ft so the forward arm clears the water tank standing at
+  // x=6.5 on the roof; the tank's 2.2 ft radius reaches x=4.3.
+  armWidth: 6.5,
+  pillars: ['C28', 'C31', 'C32'],
 };
 
-// Plan of the fourth-floor room, as the two rectangles that make the L, taken
-// from the pillar sections rather than from round numbers so that moving a
-// pillar moves the room with it.
+// Plan of the fourth-floor room, as the two rectangles that make the L.
+//
+// The outer corner is the eave's outer corner, so the walls stand on the eave.
+// The far ends are the pillars, so the room cannot grow past what carries it.
+// The arm runs forward to the end of the eave's own arm.
 export function fourthFloorRects() {
+  const ext = ROOF_EXTENSIONS.find(
+    (e) => e.level === FOURTH_FLOOR.floorLevel && e.from === FOURTH_FLOOR.from,
+  );
+  if (!ext) {
+    throw new Error(
+      `FOURTH_FLOOR needs a ROOF_EXTENSIONS entry for ${FOURTH_FLOOR.floorLevel}/${FOURTH_FLOOR.from}`,
+    );
+  }
+  const { band: eaveBand, arm: eaveArm } = extensionRects(ext);
+
   const cols = FOURTH_FLOOR.pillars.map((id) => GROUND_COLUMNS.find((c) => c.id === id));
   const missing = FOURTH_FLOOR.pillars.filter((id, i) => !cols[i]);
   if (missing.length) {
     throw new Error(`FOURTH_FLOOR.pillars: no such column: ${missing.join(', ')}`);
   }
 
-  const x0 = Math.min(...cols.map((c) => c.x - c.w / 2));
+  // Outer corner and forward reach come from the eave; the far edges from the
+  // pillars it stands over.
+  const x0 = Math.min(eaveBand.x0, eaveBand.x1);
+  const z0 = Math.min(eaveBand.z0, eaveBand.z1);
   const x1 = Math.max(...cols.map((c) => c.x + c.w / 2));
-  const z0 = Math.min(...cols.map((c) => c.z - c.d / 2));
   const z1 = Math.max(...cols.map((c) => c.z + c.d / 2));
-  const band = { x0, x1, z0, z1 };
 
-  // The arm starts where the band ends and runs forward, towards the street.
   return {
-    band,
-    arm: { x0, x1: x0 + FOURTH_FLOOR.armWidth, z0: z1, z1: z1 + FOURTH_FLOOR.armLength },
+    band: { x0, x1, z0, z1 },
+    arm: {
+      x0, x1: x0 + FOURTH_FLOOR.armWidth,
+      z0: z1, z1: Math.max(eaveArm.z0, eaveArm.z1),
+    },
+    ext,
   };
 }
 
