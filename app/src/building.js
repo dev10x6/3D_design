@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import {
   BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, GROUND_COLUMNS, ROOF_EXTENSIONS, FRONT_Z,
-  EAVE_FASCIA, roofDatum, extensionRects, fourthFloorRects,
+  EAVE_FASCIA, ROOF_SLAB_T, ROOF_COPING_T,
+  roofDatum, extensionRects, fourthFloorRects,
 } from './spec.js';
 
 const T = BUILDING.wallT;
@@ -30,7 +31,8 @@ export function makeMaterials() {
   });
   const tank = new THREE.MeshStandardMaterial({ color: 0xeaeaea, roughness: 0.55 });
   const metal = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.35, metalness: 0.85 });
-  return { plaster, plasterShade, plinth, slab, coping, frame, rail, wood, concrete, glass, glassRail, darkGlass, tank, metal };
+  const iron = new THREE.MeshStandardMaterial({ color: 0x4a4d52, roughness: 0.55, metalness: 0.7 });
+  return { plaster, plasterShade, plinth, slab, coping, frame, rail, wood, concrete, glass, glassRail, darkGlass, tank, metal, iron };
 }
 
 function box(parent, w, h, d, x, y, z, mat) {
@@ -320,13 +322,14 @@ export function buildBuilding(mats) {
   const roof = new THREE.Group();
   roof.name = 'roof';
   const rb = BUILDING.roofBase;
-  box(roof, W + 1.2, 0.7, D + 1.2, W / 2, rb + 0.35, D / 2, mats.slab);
-  box(roof, W + 1.6, 0.35, D + 1.6, W / 2, rb + 0.85, D / 2, mats.coping);
+  box(roof, W + 1.2, ROOF_SLAB_T, D + 1.2, W / 2, rb + ROOF_SLAB_T / 2, D / 2, mats.slab);
+  box(roof, W + 1.6, ROOF_COPING_T, D + 1.6, W / 2,
+    rb + ROOF_SLAB_T + ROOF_COPING_T / 2, D / 2, mats.coping);
 
   const pw = 0.6;
   const ph = BUILDING.parapet;
-  const py = rb + 0.7 + ph / 2;
-  const cy2 = rb + 0.7 + ph + 0.11;
+  const py = rb + ROOF_SLAB_T + ph / 2;
+  const cy2 = rb + ROOF_SLAB_T + ph + 0.11;
 
   // The fourth-floor room stands on the rear-west corner of this roof, so the
   // parapet and its capping run only where the roof is still open terrace.

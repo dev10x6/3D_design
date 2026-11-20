@@ -164,6 +164,23 @@ and the whole geometry layer. `building.js` and `corner.js` both import them
 from spec. Do not reintroduce local copies — there were two, and they had
 already drifted.
 
+The roof frame (`frame.js`) is the other concept addition: front-bay pillars
+C1/C4 and C3/C6 carry on up through the roof for 10 ft, each pair is capped by a
+concrete roof beam, and iron beams span between the two roof beams. It is built
+on the `roof` group rather than as a level, for the same reason as the fourth
+floor — it has no floor area or storey height, so it must not become a
+`BUILDING.floors` entry. Because it hangs off the roof group it shows and hides
+with the roof and needs no change to level isolation.
+
+`ROOF_FRAME` in `spec.js` names the pairs by pillar id, and `roofFrameLayout()`
+reads their positions and sections back from `GROUND_COLUMNS`, so the frame
+stands exactly over the pillars it continues and follows any correction to the
+pillar survey. The iron beam count is `ROOF_FRAME.tieCount`; the positions are
+derived evenly between the two roof beams and insetted from both ends, so
+changing the count needs no other edit. The frame stands on `roofTopFace()`,
+which `building.js` also builds the roof slab and coping from — change the deck
+thickness there, not in two places.
+
 Site furniture has to follow the `+Z` front: the road, kerb, gate piers and
 gate leaves all sit at the front wall (`PLOT.depth`), and the garden is behind
 the rear wall at low `z`. An earlier orientation flip moved the boundary walls

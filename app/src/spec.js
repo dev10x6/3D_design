@@ -127,6 +127,17 @@ const ROOF_SLAB_OVERHANG = 0.6;
 // beneath an extension has to clear it.
 export const EAVE_FASCIA = 0.45;
 
+// The main roof is a slab with a coping course laid on it. building.js builds
+// both from these, and the roof frame stands on the deck they make, so the deck
+// height has one owner instead of being repeated as magic numbers.
+export const ROOF_SLAB_T = 0.7;
+export const ROOF_COPING_T = 0.35;
+
+// Top face of the roof deck - what a structure standing on the roof rests on.
+export function roofTopFace() {
+  return BUILDING.roofBase + ROOF_SLAB_T + ROOF_COPING_T;
+}
+
 // The roof over a level: the slab of the floor above, or the main roof slab
 // for the top floor. Extensions are placed flush with its top face and start
 // at its outer edge, so nothing is coplanar.
@@ -351,3 +362,75 @@ export const GROUND_COLUMNS = [
   { id: 'C32', code: 'BR8C', x:  13.01, z:   0.41, w: 1.51, d: 0.84 },
   { id: 'C33', code: 'BR8R', x:  26.35, z:   0.41, w: 1.50, d: 0.84 },
 ];
+
+// Roof frame (concept). Also not in the drawing set. The front-bay pillars
+// C1/C4 on the west wall line and C3/C6 on the east wall line carry on up
+// through the roof for 10 ft, each pair is joined by a concrete beam across
+// their tops, and the two beams are joined by iron beams spanning between them.
+//
+// The pairs are named by pillar id and every dimension is read back from
+// GROUND_COLUMNS, so the frame stands exactly over the pillars it continues and
+// follows any correction to the pillar survey.
+export const ROOF_FRAME = {
+  pairs: [
+    { id: 'west', pillars: ['C1', 'C4'] },
+    { id: 'east', pillars: ['C3', 'C6'] },
+  ],
+  // Clear height of the columns above the roof deck. The beams sit on top of
+  // this, so it is the headroom under them, not the overall height.
+  columnHeight: 10.0,
+  beamDepth: 1.5,
+  // Iron beams cross between the two roof beams, evenly spaced along the span.
+  tieCount: 5,
+  tieW: 0.45,
+  tieD: 0.5,
+};
+
+/**
+ * Where the frame lands: the two beams (each with the pillars it joins) and the
+ * roof deck it stands on. Building coordinates, feet.
+ *
+ * A beam runs along z between its pair, so it is centred on their mean x, is as
+ * wide as the wider of the two sections, and caps both columns from the rear
+ * column's outer face to the front column's.
+ */
+export function roofFrameLayout() {
+  const find = (id) => {
+    const c = GROUND_COLUMNS.find((col) => col.id === id);
+    if (!c) throw new Error(`ROOF_FRAME names a pillar that is not in GROUND_COLUMNS: ${id}`);
+    return c;
+  };
+
+  const beams = ROOF_FRAME.pairs.map((p) => {
+    const cols = p.pillars.map(find);
+    return {
+      id: p.id,
+      cols,
+      x: cols.reduce((s, c) => s + c.x, 0) / cols.length,
+      width: Math.max(...cols.map((c) => c.w)),
+      z0: Math.min(...cols.map((c) => c.z - c.d / 2)),
+      z1: Math.max(...cols.map((c) => c.z + c.d / 2)),
+    };
+  });
+
+  if (beams.length !== 2) {
+    throw new Error('ROOF_FRAME.pairs must describe exactly two beams to join');
+  }
+
+  // The iron beams are spaced evenly between the two roof beams and inset from
+  // both ends, so none of them lands on a column or overhangs a beam end.
+  const { tieCount } = ROOF_FRAME;
+  if (tieCount < 1) throw new Error('ROOF_FRAME.tieCount must be at least 1');
+  const z0 = Math.min(...beams.map((b) => b.z0));
+  const z1 = Math.max(...beams.map((b) => b.z1));
+  const ties = Array.from({ length: tieCount },
+    (_, i) => z0 + ((z1 - z0) * (i + 1)) / (tieCount + 1));
+
+  return {
+    beams,
+    ties,
+    deck: roofTopFace(),
+    columnHeight: ROOF_FRAME.columnHeight,
+    beamDepth: ROOF_FRAME.beamDepth,
+  };
+}
