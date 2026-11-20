@@ -1,5 +1,7 @@
 node_modules/
 .agent_tmp/
 
-# Written by `vercel pull` / `vercel build`; holds project IDs and env vars.
-.vercel/
+# Written by `vercel link` / `vercel pull` / `vercel build`; holds project IDs
+# and, in .env.local, a short-lived OIDC token.
+.vercel
+.env*

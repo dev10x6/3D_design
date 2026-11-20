@@ -1,5 +1,11 @@
-# The viewer never requests these; they are source material and dev notes.
+# Source material and dev notes; the viewer never requests these.
 Rajib_Bisoi_2D_Builing_Design.pdf
 AGENTS.md
 README.md
 .gitignore
+.vercelignore
+
+# Never upload credentials or local project metadata.
+.env
+.env.*
+.vercel
