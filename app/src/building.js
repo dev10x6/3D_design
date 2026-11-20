@@ -328,7 +328,8 @@ export function buildBuilding(mats) {
       // enclosures, which are the two things that already exist.
       for (const c of GROUND_COLUMNS) {
         box(g, c.w, h, c.d, c.x, y0 + h / 2, c.z, mats.concrete);
-        const tag = labelSprite(c.id.trim());
+        const tag = labelSprite(c.id);
+        tag.userData.columnId = c.id;
         tag.position.set(c.x, y0 + h * 0.55, c.z);
         tag.renderOrder = 10;
         g.add(tag);

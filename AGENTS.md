@@ -68,6 +68,12 @@ by matching each `C<n>` label to the nearest column section. Do not re-space
 them onto a tidy grid - the drawing is not a tidy grid, and the stair and lift
 clusters are what the enclosures below are built around.
 
+Numbering runs from the street inwards: C1-C3 are the front row, the count
+carries back through the stair and lift cluster (C13-C21), and C31-C33 are the
+rear row. Left to right within a row. The array is written in C1..C33 order so
+build order and drawing order agree; the `code` aliases still count rows from
+the street, which is why the last entries carry the `BR8` codes.
+
 Orientation: `+Z` is the front, towards the street, so the front facade sits at
 `FRONT_Z` (= depth) and the rear at `REAR_Z` (= 0). Use those two constants
 rather than a bare `0` or `depth`, and remember that `+X` is east, which is

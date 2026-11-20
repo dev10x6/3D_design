@@ -119,21 +119,6 @@ export function buildSite(mats) {
   kerb.receiveShadow = true;
   site.add(kerb);
 
-  // ---------- Trees ----------
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b5439, roughness: 0.95 });
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0x5d7a44, roughness: 0.95 });
-  const trees = [[1.5, 4], [PLOT.frontWidth - 3, 5], [2.5, 86], [PLOT.frontWidth - 2.5, 92]];
-  for (const [tx, tz] of trees) {
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 6, 8), trunkMat);
-    trunk.position.set(tx, 3, tz);
-    trunk.castShadow = true;
-    site.add(trunk);
-    const crown = new THREE.Mesh(new THREE.SphereGeometry(4.2, 14, 10), leafMat);
-    crown.position.set(tx, 8.6, tz);
-    crown.castShadow = true; crown.receiveShadow = true;
-    site.add(crown);
-  }
-
   site.userData.centerX = PLOT.frontWidth / 2;
   return site;
 }
