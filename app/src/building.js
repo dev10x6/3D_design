@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, STILT_COLUMNS } from './spec.js';
+import { BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, STILT_COLUMNS, ROOF_EXTENSIONS } from './spec.js';
 
 const T = BUILDING.wallT;
 
@@ -157,6 +157,60 @@ function balcony(parent, b, level, mats) {
   parent.add(g);
 }
 
+// Floor slabs project W + 0.5 and the main roof slab W + 1.2 past the wall
+// face. Roof extensions continue outwards from that edge.
+const SLAB_OVERHANG = 0.25;
+const ROOF_SLAB_OVERHANG = 0.6;
+
+// The roof over a level: the slab of the floor above, or the main roof slab
+// for the top floor. Extensions are placed flush with its top face and start
+// at its outer edge, so nothing is coplanar.
+function roofDatum(levelId) {
+  const i = BUILDING.floors.findIndex((f) => f.id === levelId);
+  const next = BUILDING.floors[i + 1];
+  if (next) return { y: next.base, overhang: SLAB_OVERHANG };
+  return { y: BUILDING.roofBase + 0.7, overhang: ROOF_SLAB_OVERHANG };
+}
+
+/**
+ * An L-shaped eaves slab `depth` wide added to the roof of a level, turning
+ * the east corner. `armX` runs west along the facade from the east wall,
+ * `armZ` runs along the east wall away from the facade.
+ */
+function roofExtension(parent, ext, mats) {
+  const W = BUILDING.width;
+  const D = BUILDING.depth;
+  const { depth, armX, armZ } = ext;
+  const front = ext.from === 'frontEast';
+  const t = BUILDING.slabT;
+  const { y: top, overhang: ov } = roofDatum(ext.level);
+
+  const g = new THREE.Group();
+  g.name = `roof-extension-${ext.level}-${ext.from}`;
+  const cy = top - t / 2;
+  const x1 = W + ov + depth;
+  const az0 = front ? -ov : D - armZ;
+  const az1 = front ? armZ : D + ov;
+
+  // Band along the facade, from the slab edge outwards.
+  const bz0 = front ? -(ov + depth) : D + ov;
+  const bz1 = front ? -ov : D + ov + depth;
+  const bx0 = W - armX;
+  box(g, x1 - bx0, t, bz1 - bz0, (bx0 + x1) / 2, cy, (bz0 + bz1) / 2, mats.slab);
+
+  // Arm down the east side, starting where the band ends.
+  box(g, x1 - (W + ov), t, az1 - az0, (W + ov + x1) / 2, cy, (az0 + az1) / 2, mats.slab);
+
+  // Fascia under the two outer edges so the eave reads as a slab edge.
+  const lipH = 0.45;
+  const lipY = top - t - lipH / 2 + 0.05;
+  box(g, x1 - bx0, lipH, 0.22, (bx0 + x1) / 2, lipY, front ? bz0 + 0.11 : bz1 - 0.11, mats.coping);
+  box(g, 0.22, lipH, az1 - az0, x1 - 0.11, lipY, (az0 + az1) / 2, mats.coping);
+
+  parent.add(g);
+  return g;
+}
+
 export function buildBuilding(mats) {
   const root = new THREE.Group();
   root.name = 'building';
@@ -222,6 +276,10 @@ export function buildBuilding(mats) {
       // floor band
       box(g, W + 1.1, 0.42, D + 1.1, W / 2, y0 + 0.21, D / 2, mats.coping);
       for (const b of BALCONIES[level.id] || []) balcony(g, b, level, mats);
+    }
+
+    for (const ext of ROOF_EXTENSIONS.filter((e) => e.level === level.id)) {
+      roofExtension(g, ext, mats);
     }
   }
 
