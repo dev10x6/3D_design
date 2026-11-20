@@ -73,16 +73,20 @@ const building = buildBuilding(mats);
 scene.add(site, building);
 
 // ---------- Corner box ----------
-// The box occupies one storey, so it goes in that level's group and level
-// isolation hides it with the floor.
+// buildCorner returns one group per storey the box passes through; each goes
+// into its own level group so level isolation keeps working.
 let corner = null;
 
 function applyCornerStyle(style) {
-  corner?.group.parent?.remove(corner.group);
+  if (corner) {
+    for (const g of Object.values(corner.levels)) g.parent?.remove(g);
+  }
   corner = buildCorner(style);
-  const host = building.userData.floorGroups[CORNER_FRAME.level];
-  corner.group.visible = host.visible;
-  host.add(corner.group);
+  for (const [id, g] of Object.entries(corner.levels)) {
+    const host = building.userData.floorGroups[id];
+    g.visible = host.visible;
+    host.add(g);
+  }
 }
 
 // ---------- Controls ----------
@@ -101,15 +105,15 @@ const PX = PLOT.frontWidth / 2;
 
 // dir = direction from the building towards the camera (normalised on use).
 const VIEWS = {
-  front: { dir: [0, 0, -1], ortho: true, label: 'Front elevation' },
-  rear: { dir: [0, 0, 1], ortho: true, label: 'Rear elevation' },
+  front: { dir: [0, 0, 1], ortho: true, label: 'Front elevation' },
+  rear: { dir: [0, 0, -1], ortho: true, label: 'Rear elevation' },
   left: { dir: [-1, 0, 0], ortho: true, label: 'West elevation' },
   right: { dir: [1, 0, 0], ortho: true, label: 'East elevation' },
-  frontLeft: { dir: [-0.62, 0.4, -0.68], label: 'Front left' },
-  frontRight: { dir: [0.62, 0.4, -0.68], label: 'Front right' },
-  rearLeft: { dir: [-0.62, 0.4, 0.68], label: 'Rear left' },
-  rearRight: { dir: [0.62, 0.4, 0.68], label: 'Rear right' },
-  aerial: { dir: [-0.55, 0.78, -0.6], label: 'Aerial' },
+  frontLeft: { dir: [-0.62, 0.4, 0.68], label: 'Front left' },
+  frontRight: { dir: [0.62, 0.4, 0.68], label: 'Front right' },
+  rearLeft: { dir: [-0.62, 0.4, -0.68], label: 'Rear left' },
+  rearRight: { dir: [0.62, 0.4, -0.68], label: 'Rear right' },
+  aerial: { dir: [-0.55, 0.78, 0.6], label: 'Aerial' },
   top: { dir: [0.001, 1, 0.001], label: 'Roof plan' },
 };
 
@@ -287,7 +291,7 @@ cornerButtons.forEach((b) => b.addEventListener('click', () => {
   const style = b.dataset.corner;
   cornerButtons.forEach((o) => o.classList.toggle('active', o === b));
   if (style === 'none') {
-    if (corner) corner.group.visible = false;
+    if (corner) for (const g of Object.values(corner.levels)) g.visible = false;
   } else {
     applyCornerStyle(style);
     setLevel(document.querySelector('[data-level].active').dataset.level);

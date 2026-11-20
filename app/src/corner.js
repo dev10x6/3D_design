@@ -1,10 +1,6 @@
 import * as THREE from 'three';
 import { BUILDING, OPENINGS, CORNER_FRAME, CORNER_STYLES, ROOF_EXTENSIONS } from './spec.js';
 
-// Existing floor slabs project 0.25 past the wall face and the roof slab 0.6;
-// the box stops just outside whichever edge it abuts so no faces are coplanar.
-const SLAB_GAP = 0.01;
-
 function cornerMats(styleKey) {
   const s = CORNER_STYLES[styleKey];
   const std = (color, roughness = 0.7, metalness = 0) =>
@@ -44,146 +40,119 @@ function roofDatum(levelId) {
   return { y: BUILDING.roofBase + 0.7, overhang: 0.6 };
 }
 
-/**
- * Footprint of the box, derived from the roof extension it sits on so the two
- * always agree. The extension's slab is the floor the box stands on and also
- * its roof, so the box repeats the extension's 2 ft footprint exactly and
- * rises from the slab's top face.
- */
-function footprint() {
+function extensionFor(level) {
   const ext = ROOF_EXTENSIONS.find(
-    (e) => e.level === CORNER_FRAME.level && e.from === CORNER_FRAME.from,
+    (e) => e.level === level && e.from === CORNER_FRAME.from,
   );
   if (!ext) {
     throw new Error(
-      `CORNER_FRAME needs a ROOF_EXTENSIONS entry for ${CORNER_FRAME.level}/${CORNER_FRAME.from}`,
+      `CORNER_FRAME needs a ROOF_EXTENSIONS entry for ${level}/${CORNER_FRAME.from}`,
     );
   }
+  return ext;
+}
+
+/**
+ * The box is the volume between the two roof extensions at its corner: the
+ * floor extension is the slab it stands on, the roof extension is the slab that
+ * caps it. Plan and height both come from those extensions, so they cannot
+ * drift apart from the box.
+ */
+function footprint() {
+  const floorExt = extensionFor(CORNER_FRAME.floorLevel);
+  const roofExt = extensionFor(CORNER_FRAME.roofLevel);
 
   const W = BUILDING.width;
   const D = BUILDING.depth;
-  const { depth, armX, armZ } = ext;
-  const front = ext.from === 'frontEast';
-  const { y: slabTop, overhang: ov } = roofDatum(ext.level);
+  const { depth, armX, armZ } = roofExt;
+  const front = CORNER_FRAME.from === 'frontEast';
+  const base = roofDatum(CORNER_FRAME.floorLevel);
+  const top = roofDatum(CORNER_FRAME.roofLevel);
+  const ov = top.overhang;
+  const slabT = BUILDING.slabT;
+  const lipH = 0.45;
 
-  // Same outer and inner edges the extension's slab spans.
-  const x1 = W + ov + depth;
-  const x0 = W + ov + SLAB_GAP;
-  const z0 = front ? -(ov + depth) : D + ov;
-  const z1 = front ? -ov : D + ov + depth;
-
-  const fx0 = x1 - armX;
-  const wz1 = front ? armZ : D + ov + armZ;
+  // Same two rectangles building.js lays the extension slabs on, so the box
+  // plan and the eaves above and below it are the same L, not just similar.
+  const frontArm = {
+    x0: W - armX, x1: W + ov + depth,
+    z0: front ? D + ov : -ov - depth,
+    z1: front ? D + ov + depth : -ov,
+  };
+  const sideArm = {
+    x0: W + ov, x1: W + ov + depth,
+    z0: front ? D + ov - armZ : -ov,
+    z1: front ? D + ov : -ov + armZ,
+  };
 
   return {
-    front, depth, baseY: slabTop, height: CORNER_FRAME.height,
-    fz0: z0, fz1: z1, fx0, fx1: x1, wz0: z1, wz1, wx0: x0, wx1: x1,
-    frontArm: { x0: fx0, x1, z0, z1 },
-    sideArm: { x0, x1, z0: z1, z1: wz1 },
+    front, depth, ov, baseY: base.y,
+    // Fills the storey between the slabs, stopping below the roof fascia lip.
+    height: top.y - slabT - lipH - base.y,
+    frontArm, sideArm, floorExt, roofExt,
   };
 }
 
-function slabBand(parent, b, y0, h, mat) {
-  box(parent, b.x1 - b.x0, h, b.z1 - b.z0,
-    (b.x0 + b.x1) / 2, y0 + h / 2, (b.z0 + b.z1) / 2, mat);
-}
-
-// The box itself: solid walls on the two outer faces, a timber soffit, and the
-// band and roof coping that cap it. Standing on the extension slab, the box
-// occupies the L in plan rather than a full rectangle.
+// The box: solid walls on the two outer faces of each arm, a timber soffit and
+// the band that caps it under the roof extension.
 function buildBox(parent, fp, styleKey, mats) {
-  const { depth, baseY, height, fz0, fz1, fx0, fx1, wz0, wz1, wx0, wx1 } = fp;
+  const { baseY, height, frontArm: fa, sideArm: sa } = fp;
   const topY = baseY + height;
   const wallT = 0.45;
   const fasciaH = 0.9;
+  const yMid = baseY + height / 2;
 
-  // Outer walls of the two arms, full height.
-  box(parent, fx1 - fx0, height, wallT,
-    (fx0 + fx1) / 2, baseY + height / 2, fz0 + wallT / 2, mats.cladding);
-  box(parent, wallT, height, wz1 - wz0,
-    wx1 - wallT / 2, baseY + height / 2, (wz0 + wz1) / 2, mats.cladding);
+  // Outer walls: the front face of the front arm and the east face of the side
+  // arm are what the box shows to the street and the side.
+  const outerZ = fp.front ? fa.z0 : fa.z1;
+  box(parent, fa.x1 - fa.x0, height, wallT,
+    (fa.x0 + fa.x1) / 2, yMid, outerZ + (fp.front ? wallT / 2 : -wallT / 2), mats.cladding);
+  box(parent, wallT, height, sa.z1 - sa.z0,
+    sa.x1 - wallT / 2, yMid, (sa.z0 + sa.z1) / 2, mats.cladding);
 
-  // Return walls at the free end of each arm, closing the L.
-  box(parent, wallT, height, depth,
-    fx0 + wallT / 2, baseY + height / 2, (fz0 + fz1) / 2, mats.cladding);
-  box(parent, depth, height, wallT,
-    (wx0 + wx1) / 2, baseY + height / 2, wz1 - wallT / 2, mats.cladding);
+  // Return walls closing the L at the free end of each arm.
+  box(parent, wallT, height, fa.z1 - fa.z0,
+    fa.x0 + wallT / 2, yMid, (fa.z0 + fa.z1) / 2, mats.cladding);
+  const endZ = fp.front ? sa.z0 : sa.z1;
+  box(parent, sa.x1 - sa.x0, height, wallT,
+    (sa.x0 + sa.x1) / 2, yMid, endZ + (fp.front ? wallT / 2 : -wallT / 2), mats.cladding);
 
-  // Fascia band under the roof coping, reading as the top of the box.
-  box(parent, fx1 - fx0, fasciaH, depth,
-    (fx0 + fx1) / 2, topY - fasciaH / 2, (fz0 + fz1) / 2, mats.claddingDark);
-  box(parent, depth, fasciaH, wz1 - wz0,
-    (wx0 + wx1) / 2, topY - fasciaH / 2, (wz0 + wz1) / 2, mats.claddingDark);
+  // Fascia band under the roof extension, reading as the top of the box.
+  box(parent, fa.x1 - fa.x0, fasciaH, fa.z1 - fa.z0,
+    (fa.x0 + fa.x1) / 2, topY - fasciaH / 2, (fa.z0 + fa.z1) / 2, mats.claddingDark);
+  box(parent, sa.x1 - sa.x0, fasciaH, sa.z1 - sa.z0,
+    (sa.x0 + sa.x1) / 2, topY - fasciaH / 2, (sa.z0 + sa.z1) / 2, mats.claddingDark);
 
-  // Timber soffit lining the underside of the roof coping.
-  box(parent, fx1 - fx0 - 0.3, 0.12, fz1 - fz0 - 0.3,
-    (fx0 + fx1) / 2, topY - fasciaH - 0.06, (fz0 + fz1) / 2, mats.soffit);
-  box(parent, wx1 - wx0 - 0.3, 0.12, wz1 - wz0 - 0.3,
-    (wx0 + wx1) / 2, topY - fasciaH - 0.06, (wz0 + wz1) / 2, mats.soffit);
-
-  // Roof coping: the box's own roof, set just above the extension slab so the
-  // two read as one eave without sharing a face.
-  const copH = 0.3;
-  box(parent, fx1 - fx0 + 0.2, copH, depth + 0.2,
-    (fx0 + fx1) / 2, topY + copH / 2, (fz0 + fz1) / 2, mats.stone);
-  box(parent, depth + 0.2, copH, wz1 - wz0,
-    (wx0 + wx1) / 2, topY + copH / 2, (wz0 + wz1) / 2, mats.stone);
+  // Timber soffit lining the underside of the roof, downlights below it.
+  for (const a of [fa, sa]) {
+    box(parent, a.x1 - a.x0 - 0.3, 0.12, a.z1 - a.z0 - 0.3,
+      (a.x0 + a.x1) / 2, topY - fasciaH - 0.06, (a.z0 + a.z1) / 2, mats.soffit);
+  }
+  downlights(parent, fp, topY - fasciaH - 0.14, mats);
 
   if (styleKey === 'wood') {
-    planters(parent, fp, topY + copH, mats);
     windowFrames(parent, fp, baseY, mats);
   } else {
     fins(parent, fp, topY, mats);
     columnBands(parent, fp, baseY, height, mats);
   }
-
-  downlights(parent, fp, topY - fasciaH - 0.14, mats);
-}
-
-// Linear planting troughs on the box roof, as in the first reference.
-function planters(parent, fp, top, mats) {
-  const { planterDepth: pd, planterHeight: ph } = CORNER_FRAME;
-  const y = top + ph / 2;
-
-  box(parent, fp.fx1 - fp.fx0, ph, pd,
-    (fp.fx0 + fp.fx1) / 2, y, fp.fz0 + pd / 2, mats.planter);
-  box(parent, pd, ph, fp.wz1 - fp.wz0,
-    fp.wx1 - pd / 2, y, (fp.wz0 + fp.wz1) / 2, mats.planter);
-
-  const nx = Math.max(3, Math.round((fp.fx1 - fp.fx0) / 2.2));
-  for (let i = 0; i < nx; i++) {
-    shrub(parent, fp.fx0 + 0.9 + (i * (fp.fx1 - fp.fx0 - 1.8)) / (nx - 1),
-      fp.fz0 + pd / 2, top + ph + 0.16, mats);
-  }
-  const nz = Math.max(3, Math.round((fp.wz1 - fp.wz0) / 2.2));
-  for (let i = 0; i < nz; i++) {
-    shrub(parent, fp.wx1 - pd / 2,
-      fp.wz0 + 0.9 + (i * (fp.wz1 - fp.wz0 - 1.8)) / (nz - 1), top + ph + 0.16, mats);
-  }
-}
-
-function shrub(parent, x, z, y, mats) {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 7), mats.foliage);
-  m.scale.y = 0.75;
-  m.position.set(x, y, z);
-  m.castShadow = true;
-  parent.add(m);
 }
 
 // Extruded white box frames standing off the facade, per the first reference.
 function windowFrames(parent, fp, baseY, mats) {
-  const ops = OPENINGS[CORNER_FRAME.level].front.filter(
-    (o) => o.type === 'window' && o.a >= fp.fx0 && o.b <= fp.fx1,
-  );
   const t = 0.22;
   const proj = 0.44;
-  const zc = -proj / 2;
+  const fa = fp.frontArm;
+  const ops = OPENINGS[CORNER_FRAME.roofLevel].front.filter(
+    (o) => o.type === 'window' && o.a >= fa.x0 && o.b <= fa.x1,
+  );
 
   for (const o of ops) {
     const w = o.b - o.a;
     const hh = o.head - o.sill;
     const cu = (o.a + o.b) / 2;
     const cy = baseY + (o.sill + o.head) / 2;
+    const zc = fp.front ? fa.z0 + proj / 2 : fa.z1 - proj / 2;
 
     box(parent, w + 2 * t, t, proj, cu, cy + hh / 2 + t / 2, zc, mats.frame);
     box(parent, w + 2 * t, t, proj, cu, cy - hh / 2 - t / 2, zc, mats.frame);
@@ -196,50 +165,78 @@ function windowFrames(parent, fp, baseY, mats) {
 // reference.
 function fins(parent, fp, top, mats) {
   const finLen = 3.4;
-  const x = fp.fx0 - finLen / 2 + 0.3;
+  const fa = fp.frontArm;
+  const x = fa.x0 - finLen / 2 + 0.3;
   for (let i = 0; i < 3; i++) {
-    box(parent, finLen, 0.34, fp.depth, x, top - 1.0 - i * 1.25,
-      (fp.fz0 + fp.fz1) / 2, mats.claddingDark);
+    box(parent, finLen, 0.34, fa.z1 - fa.z0, x, top - 1.0 - i * 1.25,
+      (fa.z0 + fa.z1) / 2, mats.claddingDark);
   }
 }
 
-// White grooved column bands running the box height below the coping.
+// White grooved column bands running the box height below the roof.
 function columnBands(parent, fp, baseY, height, mats) {
   const y = baseY + height / 2;
+  const fa = fp.frontArm;
+  const sa = fp.sideArm;
+  const zIn = fp.front ? fa.z0 + 0.9 : fa.z1 - 0.9;
   for (const dx of [0.2, 1.9, 3.6]) {
-    box(parent, 0.62, height, 0.5, fp.fx0 + dx, y, fp.fz0 + 0.9, mats.wall);
+    box(parent, 0.62, height, 0.5, fa.x0 + dx, y, zIn, mats.wall);
   }
   for (const dz of [2.2, 4.4]) {
-    box(parent, 0.5, height, 0.62, fp.wx1 + 0.35, y, fp.wz1 - dz, mats.wall);
+    box(parent, 0.5, height, 0.62, sa.x1 + 0.35, y, sa.z1 - dz, mats.wall);
   }
 }
 
 // Recessed warm downlights in the timber soffit.
 function downlights(parent, fp, y, mats) {
-  const n = Math.max(2, Math.round((fp.fx1 - fp.fx0) / 3));
+  const fa = fp.frontArm;
+  const n = Math.max(2, Math.round((fa.x1 - fa.x0) / 3));
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffd9a0, emissive: 0xffb960, emissiveIntensity: 1.5, roughness: 0.4,
   });
   for (let i = 0; i < n; i++) {
-    const x = fp.fx0 + 1.6 + (i * (fp.fx1 - fp.fx0 - 2.6)) / Math.max(1, n - 1);
+    const x = fa.x0 + 1.6 + (i * (fa.x1 - fa.x0 - 2.6)) / Math.max(1, n - 1);
     const m = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.1, 14), mat);
-    m.position.set(x, y, (fp.fz0 + fp.fz1) / 2);
+    m.position.set(x, y, (fa.z0 + fa.z1) / 2);
     parent.add(m);
   }
 }
 
 /**
- * Build the corner box. It occupies one storey, so it returns one group that
- * main.js parents into that level's group and level isolation hides with the
- * floor. The roof extension slab underneath is both its floor and its eave.
+ * Build the corner box. It fills the storey between the floor and roof
+ * extensions, so it returns one group per storey it passes through, split at
+ * each storey's floor level. main.js parents each into the matching level
+ * group, which keeps level isolation working across the two floors.
  */
 export function buildCorner(styleKey = CORNER_FRAME.style) {
   const mats = cornerMats(styleKey);
   const fp = footprint();
-  const g = new THREE.Group();
-  g.name = `corner-${CORNER_FRAME.level}`;
-  g.userData.cornerStyle = styleKey;
-  g.userData.cornerFrom = CORNER_FRAME.from;
-  buildBox(g, fp, styleKey, mats);
-  return { group: g, footprint: fp, mats, style: styleKey };
+
+  const whole = new THREE.Group();
+  buildBox(whole, fp, styleKey, mats);
+  whole.updateMatrixWorld(true);
+
+  // The box fills exactly one storey: the one under the roof extension.
+  const spanned = BUILDING.floors.filter((f) => f.id === CORNER_FRAME.roofLevel);
+
+  const levels = {};
+  for (const lv of spanned) {
+    const g = new THREE.Group();
+    g.name = `corner-${lv.id}`;
+    g.userData.cornerStyle = styleKey;
+    g.userData.cornerFrom = CORNER_FRAME.from;
+    levels[lv.id] = g;
+  }
+
+  for (const mesh of [...whole.children]) {
+    const b = new THREE.Box3().setFromObject(mesh);
+    // Owned by the topmost storey whose floor is at or below the mesh centre.
+    const cy = (b.min.y + b.max.y) / 2;
+    let owner = spanned[0];
+    for (const lv of spanned) if (cy >= lv.base - 0.001) owner = lv;
+    whole.remove(mesh);
+    levels[owner.id].add(mesh);
+  }
+
+  return { levels, footprint: fp, mats, style: styleKey };
 }

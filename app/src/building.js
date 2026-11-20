@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, STILT_COLUMNS, ROOF_EXTENSIONS } from './spec.js';
+import { BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, STILT_COLUMNS, ROOF_EXTENSIONS, FRONT_Z } from './spec.js';
 
 const T = BUILDING.wallT;
 
@@ -189,12 +189,12 @@ function roofExtension(parent, ext, mats) {
   g.name = `roof-extension-${ext.level}-${ext.from}`;
   const cy = top - t / 2;
   const x1 = W + ov + depth;
-  const az0 = front ? -ov : D - armZ;
-  const az1 = front ? armZ : D + ov;
-
-  // Band along the facade, from the slab edge outwards.
-  const bz0 = front ? -(ov + depth) : D + ov;
-  const bz1 = front ? -ov : D + ov + depth;
+  // Front is +Z and rear is 0, so the two corners mirror in z. The band sits
+  // outside the facade it turns; the arm runs back along the east wall.
+  const bz0 = front ? D + ov : -ov - depth;
+  const bz1 = front ? D + ov + depth : -ov;
+  const az0 = front ? D + ov - armZ : -ov;
+  const az1 = front ? D + ov : -ov + armZ;
   const bx0 = W - armX;
   box(g, x1 - bx0, t, bz1 - bz0, (bx0 + x1) / 2, cy, (bz0 + bz1) / 2, mats.slab);
 
@@ -204,7 +204,7 @@ function roofExtension(parent, ext, mats) {
   // Fascia under the two outer edges so the eave reads as a slab edge.
   const lipH = 0.45;
   const lipY = top - t - lipH / 2 + 0.05;
-  box(g, x1 - bx0, lipH, 0.22, (bx0 + x1) / 2, lipY, front ? bz0 + 0.11 : bz1 - 0.11, mats.coping);
+  box(g, x1 - bx0, lipH, 0.22, (bx0 + x1) / 2, lipY, front ? bz1 - 0.11 : bz0 + 0.11, mats.coping);
   box(g, 0.22, lipH, az1 - az0, x1 - 0.11, lipY, (az0 + az1) / 2, mats.coping);
 
   parent.add(g);
@@ -267,8 +267,8 @@ export function buildBuilding(mats) {
 
       box(g, W + 1.0, 0.4, D + 1.0, W / 2, y0 + h - 0.2, D / 2, mats.coping);
     } else {
-      buildWall(g, { axis: 'x', origin: { x: 0, z: 0 }, length: W, height: h, openings: ops.front, y0, mats });
-      buildWall(g, { axis: 'x', origin: { x: 0, z: D }, length: W, height: h, openings: ops.rear, y0, mats });
+      buildWall(g, { axis: 'x', origin: { x: 0, z: FRONT_Z }, length: W, height: h, openings: ops.front, y0, mats });
+      buildWall(g, { axis: 'x', origin: { x: 0, z: 0 }, length: W, height: h, openings: ops.rear, y0, mats });
       buildWall(g, { axis: 'z', origin: { x: 0, z: 0 }, length: D, height: h, openings: ops.west, y0, mats });
       buildWall(g, { axis: 'z', origin: { x: W, z: 0 }, length: D, height: h, openings: ops.east, y0, mats });
 
@@ -296,13 +296,13 @@ export function buildBuilding(mats) {
   const pw = 0.6;
   const ph = BUILDING.parapet;
   const py = rb + 0.7 + ph / 2;
-  box(roof, W + 1.0, ph, pw, W / 2, py, -0.1, mats.plaster);
   box(roof, W + 1.0, ph, pw, W / 2, py, D + 0.1, mats.plaster);
+  box(roof, W + 1.0, ph, pw, W / 2, py, -0.1, mats.plaster);
   box(roof, pw, ph, D + 0.6, -0.1, py, D / 2, mats.plaster);
   box(roof, pw, ph, D + 0.6, W + 0.1, py, D / 2, mats.plaster);
   const cy2 = rb + 0.7 + ph + 0.11;
-  box(roof, W + 1.3, 0.22, pw + 0.35, W / 2, cy2, -0.1, mats.coping);
   box(roof, W + 1.3, 0.22, pw + 0.35, W / 2, cy2, D + 0.1, mats.coping);
+  box(roof, W + 1.3, 0.22, pw + 0.35, W / 2, cy2, -0.1, mats.coping);
   box(roof, pw + 0.35, 0.22, D + 0.6, -0.1, cy2, D / 2, mats.coping);
   box(roof, pw + 0.35, 0.22, D + 0.6, W + 0.1, cy2, D / 2, mats.coping);
 
@@ -315,7 +315,7 @@ export function buildBuilding(mats) {
   box(roof, LIFT.x1 - LIFT.x0 + 1, 8, LIFT.z1 - LIFT.z0 + 1,
     (LIFT.x0 + LIFT.x1) / 2, rb + 4.1, (LIFT.z0 + LIFT.z1) / 2, mats.plaster);
 
-  for (const [tx, tz] of [[6.5, 12], [20.5, 74]]) {
+  for (const [tx, tz] of [[6.5, D - 12], [20.5, D - 74]]) {
     const t = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 4.2, 24), mats.tank);
     t.position.set(tx, rb + 2.1, tz);
     t.castShadow = true; t.receiveShadow = true;

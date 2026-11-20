@@ -3,10 +3,12 @@
 // SECOND & THIRD FLOOR PLAN, CONCEPT-B (REVISED-1), 29-04-2024, 1:100.
 //
 // All values in FEET, measured off the vector drawing. Origin is the outer
-// front-west corner of the main envelope:
-//   +X -> east (right when facing the front elevation)
-//   +Z -> north (towards the rear of the building)
+// rear-west corner of the main envelope, so z grows towards the street:
+//   +X -> east (right when facing the front elevation from the street)
+//   +Z -> south, towards the front / road
 //   +Y -> up
+// FRONT_Z and REAR_Z name the two long facades; use them rather than a bare 0
+// or depth so the sign is never ambiguous.
 //
 // Measured envelope: 27'-1" wide (27.1) x 90'-1" deep (90.1).
 // The plans show rooms across the ground floor, but only the stilt columns and
@@ -80,21 +82,21 @@ export const OPENINGS = {
 //   6'-7" x 8'-2"            east, beside the lift
 export const BALCONIES = {
   F1: [
-    { id: 'front', x0: 0, x1: 27.1, z0: -4.0, z1: 0, sides: ['front', 'west', 'east'] },
-    { id: 'west', x0: -3.0, x1: 0, z0: 27.0, z1: 37.8, sides: ['west', 'front', 'rear'] },
-    { id: 'east', x0: 27.1, x1: 33.7, z0: 41.7, z1: 48.2, sides: ['east', 'front', 'rear'] },
-    { id: 'rear', x0: 0, x1: 27.1, z0: 90.1, z1: 94.1, sides: ['rear', 'west', 'east'] },
+    { id: 'front', x0: 0, x1: 27.1, z0: 90.1, z1: 94.1, sides: ['front', 'west', 'east'] },
+    { id: 'west', x0: -3.0, x1: 0, z0: 52.3, z1: 63.1, sides: ['west', 'front', 'rear'] },
+    { id: 'east', x0: 27.1, x1: 33.7, z0: 41.9, z1: 48.4, sides: ['east', 'front', 'rear'] },
+    { id: 'rear', x0: 0, x1: 27.1, z0: -4.0, z1: 0, sides: ['rear', 'west', 'east'] },
   ],
   F2: [
-    { id: 'front', x0: 0, x1: 27.1, z0: -4.0, z1: 0, sides: ['front', 'west', 'east'] },
-    { id: 'west', x0: -3.0, x1: 0, z0: 27.0, z1: 37.8, sides: ['west', 'front', 'rear'] },
-    { id: 'east', x0: 27.1, x1: 33.7, z0: 41.7, z1: 48.2, sides: ['east', 'front', 'rear'] },
-    { id: 'rear', x0: 0, x1: 27.1, z0: 90.1, z1: 94.1, sides: ['rear', 'west', 'east'] },
+    { id: 'front', x0: 0, x1: 27.1, z0: 90.1, z1: 94.1, sides: ['front', 'west', 'east'] },
+    { id: 'west', x0: -3.0, x1: 0, z0: 52.3, z1: 63.1, sides: ['west', 'front', 'rear'] },
+    { id: 'east', x0: 27.1, x1: 33.7, z0: 41.9, z1: 48.4, sides: ['east', 'front', 'rear'] },
+    { id: 'rear', x0: 0, x1: 27.1, z0: -4.0, z1: 0, sides: ['rear', 'west', 'east'] },
   ],
   F3: [
-    { id: 'front', x0: 0, x1: 27.1, z0: -4.0, z1: 0, sides: ['front', 'west', 'east'] },
-    { id: 'west', x0: -3.0, x1: 0, z0: 27.0, z1: 37.8, sides: ['west', 'front', 'rear'] },
-    { id: 'rear', x0: 0, x1: 27.1, z0: 90.1, z1: 94.1, sides: ['rear', 'west', 'east'] },
+    { id: 'front', x0: 0, x1: 27.1, z0: 90.1, z1: 94.1, sides: ['front', 'west', 'east'] },
+    { id: 'west', x0: -3.0, x1: 0, z0: 52.3, z1: 63.1, sides: ['west', 'front', 'rear'] },
+    { id: 'rear', x0: 0, x1: 27.1, z0: -4.0, z1: 0, sides: ['rear', 'west', 'east'] },
   ],
 };
 
@@ -106,30 +108,36 @@ export const BALCONIES = {
 // `depth` is measured outwards from the roof slab edge, not the wall face,
 // so the eave adds to the roof that is already there.
 export const ROOF_EXTENSIONS = [
-  { level: 'F2', from: 'frontEast', depth: 2.0, armX: 13.5, armZ: 17.0 },
+  { level: 'F2', from: 'frontEast', depth: 2.0, armX: 27.1, armZ: 17.0 },
   { level: 'F3', from: 'frontEast', depth: 2.0, armX: 27.1, armZ: 17.0 },
   { level: 'F3', from: 'rearEast', depth: 2.0, armX: 27.1, armZ: 17.0 },
 ];
 
-export const LIFT = { x0: 24.6, x1: 29.9, z0: 41.7, z1: 48.2 };
+// The two long facades. The front carries the street, the driveway and the
+// 27'-1" x 4'-0" balcony, so it sits at +Z.
+export const FRONT_Z = BUILDING.depth;
+export const REAR_Z = 0;
 
-export const STAIR = { x0: 10.0, x1: 20.6, z0: 38.9, z1: 50.6 };
+export const LIFT = { x0: 24.6, x1: 29.9, z0: 41.9, z1: 48.4 };
+
+export const STAIR = { x0: 10.0, x1: 20.6, z0: 39.5, z1: 51.2 };
 
 // Corner treatment. A 2'-0" L-shaped cantilevered box wraps the front-east
-// corner on the third floor only, turning the two perpendicular faces there.
-// It hangs under the third-floor front-east roof extension and repeats that
-// extension's footprint exactly, so the 2 ft projection reads as one move.
+// corner, turning the two perpendicular faces there. The two roof extensions at
+// that corner are the box's floor and roof: the F2 one is the slab it stands
+// on, the F3 one is the slab it is capped by, and its sides are built between
+// them. Its plan and height are therefore read from those extensions rather
+// than set here, so the three cannot drift apart.
 //
-//   level  - the storey the box occupies
-//   from   - which corner it turns; must match a ROOF_EXTENSIONS entry
-//   style  - which finish to apply: 'wood' or 'darkBox'
+//   floorLevel - ROOF_EXTENSIONS level forming the box floor
+//   roofLevel  - ROOF_EXTENSIONS level forming the box roof
+//   from       - which corner it turns; must match both extensions
+//   style      - which finish to apply: 'wood' or 'darkBox'
 export const CORNER_FRAME = {
-  level: 'F3',
+  floorLevel: 'F2',
+  roofLevel: 'F3',
   from: 'frontEast',
   style: 'wood',
-  height: 8.0,
-  planterDepth: 1.2,
-  planterHeight: 1.4,
 };
 
 // Finish palettes for the two corner treatments, transcribed from the two
@@ -163,5 +171,7 @@ export const CORNER_STYLES = {
   },
 };
 
-// Columns carrying the upper floors over the open stilt-parking bay.
-export const STILT_COLUMNS = { xs: [2.0, 13.6, 25.1], zs: [61.0, 72.0, 83.0, 89.6] };
+// Stilt columns under the open ground floor. Three rows across the width and
+// four down the depth, spread over the whole footprint: the grid used to sit
+// only in one half, leaving the other half unsupported.
+export const STILT_COLUMNS = { xs: [2.0, 13.6, 25.1], zs: [2.0, 30.0, 58.0, 86.0] };

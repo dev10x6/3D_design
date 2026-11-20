@@ -38,7 +38,8 @@ export function buildSite(mats) {
   plotMesh.receiveShadow = true;
   site.add(plotMesh);
 
-  // ---------- Driveway: 10'-0" wide strip along the west side ----------
+  // ---------- Driveway: 10'-0" wide strip from the street to the gate ----------
+  // The street is at +Z, so the driveway runs up the west side to the front.
   const dw = PLOT.drivewayWidth;
   const drive = new THREE.Mesh(
     new THREE.PlaneGeometry(dw, PLOT.depth - 4),
@@ -68,11 +69,12 @@ export function buildSite(mats) {
     cap.castShadow = true;
     site.add(cap);
   };
-  addWall(0, 0, dw + 1.5, 0); // front, west of gate
-  addWall(PLOT.frontWidth - 4.5, 0, PLOT.frontWidth, 0); // front, east of gate
-  addWall(0, 0, -(halfRear - halfFront), PLOT.depth); // west
-  addWall(PLOT.frontWidth, 0, PLOT.frontWidth + (halfRear - halfFront), PLOT.depth); // east
-  addWall(-(halfRear - halfFront), PLOT.depth, PLOT.frontWidth + (halfRear - halfFront), PLOT.depth); // rear
+  const F = PLOT.depth;
+  addWall(0, F, dw + 1.5, F); // front, west of gate
+  addWall(PLOT.frontWidth - 4.5, F, PLOT.frontWidth, F); // front, east of gate
+  addWall(0, F, -(halfRear - halfFront), 0); // west
+  addWall(PLOT.frontWidth, F, PLOT.frontWidth + (halfRear - halfFront), 0); // east
+  addWall(-(halfRear - halfFront), 0, PLOT.frontWidth + (halfRear - halfFront), 0); // rear
 
   // gate piers
   for (const gx of [dw + 1.5, PLOT.frontWidth - 4.5]) {
@@ -120,7 +122,7 @@ export function buildSite(mats) {
   // ---------- Trees ----------
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b5439, roughness: 0.95 });
   const leafMat = new THREE.MeshStandardMaterial({ color: 0x5d7a44, roughness: 0.95 });
-  const trees = [[1.5, 96], [PLOT.frontWidth - 3, 95], [2.5, 14], [PLOT.frontWidth - 2.5, 8]];
+  const trees = [[1.5, 4], [PLOT.frontWidth - 3, 5], [2.5, 86], [PLOT.frontWidth - 2.5, 92]];
   for (const [tx, tz] of trees) {
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 6, 8), trunkMat);
     trunk.position.set(tx, 3, tz);
