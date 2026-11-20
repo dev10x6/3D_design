@@ -23,26 +23,19 @@ function box(parent, w, h, d, x, y, z, mat) {
 const rect = (parent, r, y, h, mat) =>
   box(parent, r.x1 - r.x0, h, r.z1 - r.z0, (r.x0 + r.x1) / 2, y, (r.z0 + r.z1) / 2, mat);
 
-// Split a wall length into solid runs, leaving the openings the plan defines.
-function wallRuns(length, openings) {
-  const ops = [...openings].sort((p, q) => p.a - q.a);
-  const runs = [];
-  let cursor = 0;
-  for (const o of ops) {
-    const a = Math.max(0, Math.min(o.a, length));
-    if (a > cursor) runs.push({ u0: cursor, len: a - cursor });
-    cursor = Math.max(cursor, Math.min(o.b, length));
-  }
-  if (cursor < length) runs.push({ u0: cursor, len: length - cursor });
-  return runs;
+// A solid stretch of wall, `len` long, centred at `mid` along the wall axis.
+function solidRun(g, alongX, mid, len, at, base, h, mats) {
+  if (len <= 0.05) return;
+  box(g, alongX ? len : T, h, alongX ? T : len,
+    alongX ? mid : at, base + h / 2, alongX ? at : mid, mats.plaster);
 }
 
-// A glazed wall. The L's inner faces look onto the roof terrace, so they are
-// glass rather than solid, which is what makes the room read as opening onto
-// the roof it stands on.
-function glazedRun(g, { alongX, a, b, at }, base, h, mats) {
+// A glazed opening. The room's walls are the floors' walls, so the openings are
+// the same ones the storeys below use - they are glazed here rather than left
+// as holes, because there is nothing behind them to look into.
+function glazedRun(g, alongX, a, b, at, base, h, mats) {
   const len = b - a;
-  if (len <= 0.1) return;
+  if (len <= 0.05) return;
   const sill = 1.0;
   const head = h - 1.2;
   const cy = base + (sill + head) / 2;
@@ -50,7 +43,7 @@ function glazedRun(g, { alongX, a, b, at }, base, h, mats) {
   const cz = alongX ? at : (a + b) / 2;
 
   box(g, alongX ? len : T * 0.5, head - sill, alongX ? T * 0.5 : len, cx, cy, cz, mats.glass);
-  box(g, alongX ? len : T, 0.5, alongX ? T : len, cx, base + head + 0.25, cz, mats.frame);
+  box(g, alongX ? len : T, 0.45, alongX ? T : len, cx, base + head + 0.22, cz, mats.frame);
   box(g, alongX ? len : T, sill, alongX ? T : len, cx, base + sill / 2, cz, mats.plaster);
 
   const n = Math.max(2, Math.round(len / 3.5));
@@ -61,27 +54,40 @@ function glazedRun(g, { alongX, a, b, at }, base, h, mats) {
   }
 }
 
-// Walls of the room. The outer faces (rear and west) are solid with the
-// openings the floors below already use; the two inner faces of the L look onto
-// the terrace and are glazed.
+// One wall of the room, running from `a` to `b` in absolute building
+// coordinates, solid except where the storeys below already have an opening.
+// Those openings are glazed here rather than left as holes: there is nothing
+// behind them to look into.
+function buildWall(g, alongX, a, b, at, openings, base, h, mats) {
+  let cursor = a;
+  for (const o of [...openings].sort((p, q) => p.a - q.a)) {
+    const oa = Math.max(a, Math.min(o.a, b));
+    const ob = Math.max(a, Math.min(o.b, b));
+    if (ob - oa < 0.05) continue;
+    solidRun(g, alongX, (cursor + oa) / 2, oa - cursor, at, base, h, mats);
+    glazedRun(g, alongX, oa, ob, at, base, h, mats);
+    cursor = Math.max(cursor, ob);
+  }
+  solidRun(g, alongX, (cursor + b) / 2, b - cursor, at, base, h, mats);
+}
+
+// Walls of the room.
+//
+// The rear and west faces line up with the building's own walls - they are
+// carried 2.6 ft out on the eave - so they reuse the openings the storeys below
+// already have. Every other face is a new wall standing over the roof terrace,
+// so those are glazed along their whole length.
 function buildWalls(g, band, arm, base, h, mats) {
-  const yMid = base + h / 2;
-  const rear = OPENINGS.F3.rear;
-  const west = OPENINGS.F3.west;
+  buildWall(g, true, band.x0, band.x1, band.z0 + T / 2, OPENINGS.F3.rear, base, h, mats);
+  buildWall(g, false, band.z0, arm.z1, band.x0 + T / 2, OPENINGS.F3.west, base, h, mats);
 
-  for (const run of wallRuns(band.x1 - band.x0, rear)) {
-    box(g, run.len, h, T, band.x0 + run.u0 + run.len / 2, yMid, band.z0 + T / 2, mats.plaster);
-  }
-  const westLen = arm.z1 - band.z0;
-  for (const run of wallRuns(westLen, west)) {
-    box(g, T, h, run.len, band.x0 + T / 2, yMid, band.z0 + run.u0 + run.len / 2, mats.plaster);
-  }
-  for (const run of wallRuns(arm.x1 - arm.x0, OPENINGS.F3.front)) {
-    box(g, run.len, h, T, arm.x0 + run.u0 + run.len / 2, yMid, arm.z1 - T / 2, mats.plaster);
-  }
+  // Band: east face, then the stretch of front face the arm does not cover.
+  glazedRun(g, false, band.z0, band.z1, band.x1 - T / 2, base, h, mats);
+  glazedRun(g, true, arm.x1, band.x1, band.z1 - T / 2, base, h, mats);
 
-  glazedRun(g, { alongX: true, a: arm.x1, b: band.x1, at: band.z1 - T / 2 }, base, h, mats);
-  glazedRun(g, { alongX: false, a: band.z1, b: arm.z1 - T, at: arm.x1 - T / 2 }, base, h, mats);
+  // Arm: east face, then its front face.
+  glazedRun(g, false, band.z1, arm.z1, arm.x1 - T / 2, base, h, mats);
+  glazedRun(g, true, band.x0, arm.x1, arm.z1 - T / 2, base, h, mats);
 }
 
 /**
