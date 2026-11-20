@@ -1,0 +1,5 @@
+# The viewer never requests these; they are source material and dev notes.
+Rajib_Bisoi_2D_Builing_Design.pdf
+AGENTS.md
+README.md
+.gitignore

@@ -51,6 +51,28 @@ and 48.2, and is modelled as a full-height shaft. The rear of the ground floor
 is open stilt parking on columns, which is what the plan shows as the open
 bay behind the enclosed rooms.
 
+## Deployment
+
+Pushing to `main` deploys to Vercel via GitHub Actions
+(`.github/workflows/deploy-vercel.yml`). Pull requests get a preview
+deployment with the URL commented on the PR.
+
+There is no build step: `vercel build` just stages the static files, so what
+you commit is what is served. `vercel.json` sets long-lived caching for the
+vendored Three.js and revalidates `app/src/` so a design change is never
+served stale.
+
+Three repository secrets are required:
+
+| Secret | Where to find it |
+| --- | --- |
+| `VERCEL_TOKEN` | Vercel → Account Settings → Tokens |
+| `VERCEL_ORG_ID` | `vercel link`, then `.vercel/project.json` |
+| `VERCEL_PROJECT_ID` | `vercel link`, then `.vercel/project.json` |
+
+Set them with `gh secret set VERCEL_TOKEN` (and the other two), or under
+GitHub → Settings → Secrets and variables → Actions.
+
 ## Layout
 
 ```
@@ -61,6 +83,8 @@ app/src/building.js walls, openings, balconies, slabs, roof
 app/src/site.js     plot, boundary wall, gate, driveway, road
 app/src/main.js     renderer, camera, views, framing, UI wiring
 app/vendor/         Three.js r160 (vendored)
+vercel.json         caching headers for the static deploy
+.vercelignore       keeps the source PDF and dev notes out of the deploy
 ```
 
 `app/src/spec.js` is the single source of truth. Change a dimension there and

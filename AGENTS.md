@@ -104,3 +104,17 @@ The ground floor is deliberately unfinished: open structure with the stilt
 columns plus the staircase and lift enclosures, and no perimeter walls or rooms
 yet. Do not add walls back to the `level.id === 'GF'` branch without checking
 with the owner — the plans show rooms there, but the building is not built out.
+
+## Deployment
+
+`.github/workflows/deploy-vercel.yml` deploys on every push to `main`; pull
+requests get a preview deployment. There is no build step - Vercel serves the
+committed files - so the workflow's `verify` job is the only thing standing
+between a broken module and a blank live page. It runs `node --check` on every
+`app/src/*.js` and resolves each bare import specifier against `app/vendor/`
+using the same mapping as the import map in `app/index.html`. If you add an
+import map entry or a vendored file, update that mapping or the check fails.
+
+`.vercelignore` keeps the source PDF and the dev notes out of the deploy. Add
+anything else that is source material rather than site content there, not to
+`.gitignore`, since it should stay in the repo.

@@ -1,2 +1,5 @@
 node_modules/
 .agent_tmp/
+
+# Written by `vercel pull` / `vercel build`; holds project IDs and env vars.
+.vercel/
