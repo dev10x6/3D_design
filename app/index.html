@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rajib Bisoi — 3D Building Elevation</title>
+<link rel="icon" href="./favicon.png" type="image/png" />
+<style>
+  :root {
+    --ink: #1b232b;
+    --muted: #5c6b78;
+    --line: rgba(255, 255, 255, 0.14);
+    --panel: rgba(20, 27, 34, 0.82);
+    --panel-2: rgba(255, 255, 255, 0.07);
+    --accent: #d9a353;
+    --accent-soft: rgba(217, 163, 83, 0.16);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    background: #0f151b; color: #eef2f6; overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  #scene { display: block; width: 100vw; height: 100vh; }
+
+  .panel {
+    position: fixed; backdrop-filter: blur(14px) saturate(140%);
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 16px; box-shadow: 0 18px 46px rgba(0, 0, 0, 0.42);
+  }
+
+  /* ---------- Title ---------- */
+  #title { top: 18px; left: 18px; padding: 15px 20px 14px; max-width: 340px; }
+  #title h1 { margin: 0; font-size: 15.5px; letter-spacing: 0.035em; text-transform: uppercase; font-weight: 650; }
+  #title p { margin: 5px 0 0; font-size: 11.5px; color: #9fb0bf; line-height: 1.55; }
+  #title .tag {
+    display: inline-block; margin-top: 9px; padding: 3px 8px; border-radius: 5px;
+    background: var(--accent-soft); color: var(--accent); font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
+  }
+
+  /* ---------- Views ---------- */
+  #views { top: 18px; right: 18px; padding: 12px; width: 218px; }
+  .grp-label {
+    font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: #8698a7; font-weight: 700; margin: 2px 0 8px 3px;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .grid.one { grid-template-columns: 1fr; }
+  button {
+    font: inherit; font-size: 11.5px; color: #dce5ed; cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 9px; padding: 8px 9px; transition: all 0.16s ease;
+    text-align: center; letter-spacing: 0.01em;
+  }
+  button:hover { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.26); }
+  button.active {
+    background: var(--accent-soft); border-color: rgba(217, 163, 83, 0.55);
+    color: #f0c88a; font-weight: 600;
+  }
+  .sep { height: 1px; background: var(--line); margin: 11px 0 10px; }
+
+  /* ---------- Levels ---------- */
+  #levels { left: 18px; bottom: 18px; padding: 12px; width: 268px; }
+  #levelInfo {
+    margin-top: 10px; padding: 10px 11px; border-radius: 10px;
+    background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  #viewLabel {
+    margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line);
+    font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #8fa2b1; text-align: center; font-weight: 600;
+  }
+  #levelInfo strong { font-size: 12px; color: #f2e2c6; font-weight: 650; }
+  #levelInfo span { font-size: 10.5px; color: #9db0be; line-height: 1.5; }
+
+  /* ---------- Sun ---------- */
+  #sun { right: 18px; bottom: 18px; padding: 13px 14px; width: 218px; }
+  .slider { display: flex; flex-direction: column; gap: 4px; margin-bottom: 9px; }
+  .slider .row { display: flex; justify-content: space-between; font-size: 10.5px; color: #9db0be; }
+  .slider .row b { color: #e7d3ae; font-weight: 600; font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 3px; border-radius: 2px;
+    background: rgba(255, 255, 255, 0.2); outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid #1b232b;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 13px; height: 13px; border: 2px solid #1b232b; border-radius: 50%;
+    background: var(--accent); cursor: pointer;
+  }
+
+  /* ---------- Hint ---------- */
+  #hint {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: #93a5b4; background: rgba(15, 21, 27, 0.66);
+    padding: 7px 15px; border-radius: 20px; border: 1px solid var(--line);
+    backdrop-filter: blur(10px); white-space: nowrap; pointer-events: none;
+  }
+  #hint kbd {
+    font: inherit; font-size: 10px; background: rgba(255, 255, 255, 0.13);
+    padding: 1.5px 5px; border-radius: 4px; color: #d6e2ec;
+  }
+
+  body.hide-ui .panel, body.hide-ui #hint { opacity: 0; pointer-events: none; }
+  .panel { transition: opacity 0.25s ease; }
+
+  @media (max-width: 880px) {
+    #views { width: 170px; padding: 9px; }
+    #views .grid { grid-template-columns: 1fr; }
+    #title { max-width: 210px; }
+    #title p { display: none; }
+    #levels { width: 210px; }
+    #sun { display: none; }
+    #hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div id="title" class="panel">
+  <h1>Rajib Bisoi — Residence</h1>
+  <p>3D massing &amp; elevation built from the 2D architectural drawing set
+     (sheets 02–06, scale 1:100, dated 29-04-2024). Ground + 3 floors.</p>
+  <span class="tag">Concept B · Revised 1</span>
+</div>
+
+<div id="views" class="panel">
+  <div class="grp-label">Orthographic elevations</div>
+  <div class="grid">
+    <button data-view="front">Front</button>
+    <button data-view="rear">Rear</button>
+    <button data-view="left">West</button>
+    <button data-view="right">East</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp-label">Three-quarter</div>
+  <div class="grid">
+    <button data-view="frontLeft">Front L</button>
+    <button data-view="frontRight">Front R</button>
+    <button data-view="rearLeft">Rear L</button>
+    <button data-view="rearRight">Rear R</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp-label">Overview</div>
+  <div class="grid">
+    <button data-view="aerial">Aerial</button>
+    <button data-view="top">Plan</button>
+  </div>
+  <div id="viewLabel">Front left</div>
+</div>
+
+<div id="levels" class="panel">
+  <div class="grp-label">Level isolation</div>
+  <div class="grid">
+    <button data-level="all" class="active">All</button>
+    <button data-level="GF">Ground</button>
+    <button data-level="F1">First</button>
+    <button data-level="F2">Second</button>
+    <button data-level="F3">Third</button>
+  </div>
+  <div id="levelInfo"></div>
+</div>
+
+<div id="sun" class="panel">
+  <div class="grp-label">Sun &amp; display</div>
+  <div class="slider">
+    <div class="row"><span>Azimuth</span><b id="sunAzVal">145°</b></div>
+    <input id="sunAz" type="range" min="0" max="360" step="1" value="145" />
+  </div>
+  <div class="slider">
+    <div class="row"><span>Elevation</span><b id="sunElVal">46°</b></div>
+    <input id="sunEl" type="range" min="6" max="88" step="1" value="46" />
+  </div>
+  <div class="grid">
+    <button id="btnShadows" class="active">Shadows</button>
+    <button id="btnAutoRotate">Orbit</button>
+    <button id="btnTurntable">Walk around</button>
+    <button id="btnReset">Reset</button>
+    <button id="btnPanels">Hide UI</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grid">
+    <button id="btnScreenshot">PNG</button>
+    <button id="btnGlb">GLB</button>
+  </div>
+</div>
+
+<div id="hint">Drag to orbit · Scroll to zoom · Right-drag to pan · <kbd>1</kbd>–<kbd>6</kbd> views · <kbd>R</kbd> reset</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/build/three.module.js",
+    "three/addons/": "./vendor/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
