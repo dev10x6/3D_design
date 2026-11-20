@@ -126,6 +126,13 @@ and default to collapsed so the model is not buried. `#corner` has no fixed
 `bottom` because it is stacked above `#sun`, whose height changes as it
 collapses — `stackCornerPanel()` measures it on resize and on every toggle.
 
+Pillar tags are canvas sprites from `labelSprite()`, one per ground column,
+built in the `GF` branch and toggled by "Show pillar names". Size them by
+`worldHeight` in feet, not by a fraction of the canvas: the sprite scale is a
+world-space size, so a magic multiplier makes the tag grow with the texture and
+dwarf the column it names. Sprites have no glTF primitive, so the GLB export
+clones the building and hides them before parsing.
+
 ## Deployment
 
 `.github/workflows/deploy-vercel.yml` deploys on every push to `main`; pull
