@@ -149,8 +149,11 @@ function balcony(parent, b, level, mats) {
   };
 
   for (const s of b.sides) {
-    if (s === 'front') parapet(true, w, cx, b.z0 + 0.28);
-    else if (s === 'rear') parapet(true, w, cx, b.z1 - 0.28);
+    // The parapet goes on the outer edge: 'front' balconies project past
+    // FRONT_Z, so their open edge is the high-z one, and 'rear' balconies
+    // project past REAR_Z, so theirs is the low-z one.
+    if (s === 'front') parapet(true, w, cx, b.z1 - 0.28);
+    else if (s === 'rear') parapet(true, w, cx, b.z0 + 0.28);
     else if (s === 'west') parapet(false, d, b.x0 + 0.28, cz);
     else if (s === 'east') parapet(false, d, b.x1 - 0.28, cz);
   }
@@ -161,6 +164,10 @@ function balcony(parent, b, level, mats) {
 // face. Roof extensions continue outwards from that edge.
 const SLAB_OVERHANG = 0.25;
 const ROOF_SLAB_OVERHANG = 0.6;
+
+// Depth of the fascia band hanging under an eave's outer edge. Anything built
+// beneath an extension has to clear it.
+export const EAVE_FASCIA = 0.45;
 
 // The roof over a level: the slab of the floor above, or the main roof slab
 // for the top floor. Extensions are placed flush with its top face and start
@@ -173,39 +180,60 @@ function roofDatum(levelId) {
 }
 
 /**
- * An L-shaped eaves slab `depth` wide added to the roof of a level, turning
- * the east corner. `armX` runs west along the facade from the east wall,
- * `armZ` runs along the east wall away from the facade.
+ * An L-shaped eaves slab `depth` wide added to the roof of a level, turning one
+ * corner. `from` names it: 'frontEast', 'frontWest', 'rearEast' or 'rearWest'.
+ * `armX` runs along the facade from the side wall, `armZ` runs along that side
+ * wall away from the facade.
+ *
+ * The two rectangles are returned so the corner box can be built on exactly the
+ * same plan instead of recomputing it.
  */
-function roofExtension(parent, ext, mats) {
+export function extensionRects(ext) {
   const W = BUILDING.width;
   const D = BUILDING.depth;
   const { depth, armX, armZ } = ext;
-  const front = ext.from === 'frontEast';
+  const front = ext.from.startsWith('front');
+  const east = ext.from.endsWith('East');
+  const { overhang: ov } = roofDatum(ext.level);
+  const span = (a, b) => (a < b ? [a, b] : [b, a]);
+
+  // Band along the facade, sitting outside it.
+  const [bz0, bz1] = front ? span(D + ov, D + ov + depth) : span(-ov - depth, -ov);
+  const [bx0, bx1] = east ? span(W - armX, W + ov + depth) : span(-ov - depth, armX);
+
+  // Arm down the side wall, starting where the band ends.
+  const [az0, az1] = front ? span(D + ov - armZ, D + ov) : span(-ov, -ov + armZ);
+  const [ax0, ax1] = east ? span(W + ov, W + ov + depth) : span(-ov - depth, -ov);
+
+  return {
+    front, east, overhang: ov, depth,
+    band: { x0: bx0, x1: bx1, z0: bz0, z1: bz1 },
+    arm: { x0: ax0, x1: ax1, z0: az0, z1: az1 },
+  };
+}
+
+function roofExtension(parent, ext, mats) {
   const t = BUILDING.slabT;
-  const { y: top, overhang: ov } = roofDatum(ext.level);
+  const { y: top } = roofDatum(ext.level);
+  const { band, arm } = extensionRects(ext);
 
   const g = new THREE.Group();
   g.name = `roof-extension-${ext.level}-${ext.from}`;
   const cy = top - t / 2;
-  const x1 = W + ov + depth;
-  // Front is +Z and rear is 0, so the two corners mirror in z. The band sits
-  // outside the facade it turns; the arm runs back along the east wall.
-  const bz0 = front ? D + ov : -ov - depth;
-  const bz1 = front ? D + ov + depth : -ov;
-  const az0 = front ? D + ov - armZ : -ov;
-  const az1 = front ? D + ov : -ov + armZ;
-  const bx0 = W - armX;
-  box(g, x1 - bx0, t, bz1 - bz0, (bx0 + x1) / 2, cy, (bz0 + bz1) / 2, mats.slab);
-
-  // Arm down the east side, starting where the band ends.
-  box(g, x1 - (W + ov), t, az1 - az0, (W + ov + x1) / 2, cy, (az0 + az1) / 2, mats.slab);
+  const rect = (r, mat) =>
+    box(g, r.x1 - r.x0, t, r.z1 - r.z0, (r.x0 + r.x1) / 2, cy, (r.z0 + r.z1) / 2, mat);
+  rect(band, mats.slab);
+  rect(arm, mats.slab);
 
   // Fascia under the two outer edges so the eave reads as a slab edge.
-  const lipH = 0.45;
+  const lipH = EAVE_FASCIA;
   const lipY = top - t - lipH / 2 + 0.05;
-  box(g, x1 - bx0, lipH, 0.22, (bx0 + x1) / 2, lipY, front ? bz1 - 0.11 : bz0 + 0.11, mats.coping);
-  box(g, 0.22, lipH, az1 - az0, x1 - 0.11, lipY, (az0 + az1) / 2, mats.coping);
+  const outerZ = band.z0 < 0 ? band.z0 : band.z1;
+  box(g, band.x1 - band.x0, lipH, 0.22, (band.x0 + band.x1) / 2, lipY,
+    outerZ + (outerZ < 0 ? 0.11 : -0.11), mats.coping);
+  const outerX = arm.x0 < 0 ? arm.x0 : arm.x1;
+  box(g, 0.22, lipH, arm.z1 - arm.z0, outerX + (outerX < 0 ? 0.11 : -0.11), lipY,
+    (arm.z0 + arm.z1) / 2, mats.coping);
 
   parent.add(g);
   return g;

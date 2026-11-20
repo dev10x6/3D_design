@@ -102,14 +102,17 @@ export const BALCONIES = {
 
 // Roof extensions (revised design). Each entry adds a 2 ft deep L-shaped
 // eaves slab at the roof of the named level, turning the east corner:
-//   from  - corner the extension starts at: 'frontEast' or 'rearEast'
+//   from  - corner the extension turns: 'frontEast', 'frontWest', 'rearEast'
+//           or 'rearWest'
 //   armX  - length along the facade, measured westwards from the east wall
 //   armZ  - length along the east wall, measured away from the facade
 // `depth` is measured outwards from the roof slab edge, not the wall face,
 // so the eave adds to the roof that is already there.
+// The front eaves cover only half the facade - the half over the balcony they
+// serve - so armX is half the width, not the whole 27'-1".
 export const ROOF_EXTENSIONS = [
-  { level: 'F2', from: 'frontEast', depth: 2.0, armX: 27.1, armZ: 17.0 },
-  { level: 'F3', from: 'frontEast', depth: 2.0, armX: 27.1, armZ: 17.0 },
+  { level: 'F2', from: 'frontWest', depth: 2.0, armX: 13.55, armZ: 17.0 },
+  { level: 'F3', from: 'frontWest', depth: 2.0, armX: 13.55, armZ: 17.0 },
   { level: 'F3', from: 'rearEast', depth: 2.0, armX: 27.1, armZ: 17.0 },
 ];
 
@@ -122,21 +125,33 @@ export const LIFT = { x0: 24.6, x1: 29.9, z0: 41.9, z1: 48.4 };
 
 export const STAIR = { x0: 10.0, x1: 20.6, z0: 39.5, z1: 51.2 };
 
-// Corner treatment. A 2'-0" L-shaped cantilevered box wraps the front-east
-// corner, turning the two perpendicular faces there. The two roof extensions at
-// that corner are the box's floor and roof: the F2 one is the slab it stands
-// on, the F3 one is the slab it is capped by, and its sides are built between
-// them. Its plan and height are therefore read from those extensions rather
-// than set here, so the three cannot drift apart.
+// Corner treatment. An L-shaped cantilevered box wraps the front-west corner,
+// turning the two perpendicular faces there. The two roof extensions at that
+// corner are the box's floor and roof: the F2 one is the slab it stands on, the
+// F3 one is the slab it is capped by, and its sides are built between them.
+//
+// The box reaches out past the eaves to the balcony edge so it encloses that
+// balcony rather than stopping at the wall line. `covers` names the balcony it
+// takes in, and the box's outer face is set from that balcony's own edge, so
+// the two cannot disagree. `lip` is how far the box runs past that edge.
 //
 //   floorLevel - ROOF_EXTENSIONS level forming the box floor
 //   roofLevel  - ROOF_EXTENSIONS level forming the box roof
 //   from       - which corner it turns; must match both extensions
+//   covers     - id of the balcony the box encloses; sets how far the box
+//                projects to the balcony edge
+//   lip        - projection past that balcony's outer edge
+//
+// The box's width is not set here: it is the eave's own run along the facade,
+// so the box covers exactly as much of the balcony as the eaves above and
+// below it do.
 //   style      - which finish to apply: 'wood' or 'darkBox'
 export const CORNER_FRAME = {
   floorLevel: 'F2',
   roofLevel: 'F3',
-  from: 'frontEast',
+  from: 'frontWest',
+  covers: 'front',
+  lip: 0.4,
   style: 'wood',
 };
 

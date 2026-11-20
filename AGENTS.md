@@ -75,16 +75,27 @@ bracket it and the finish, and `CORNER_STYLES` holds the two palettes, while
 
 The box is made of those two extensions. `floorLevel` is the extension whose
 slab it stands on and `roofLevel` the extension whose slab caps it, so the box
-fills exactly the storey between them: its base is the floor slab's top face,
-its top stops below the roof slab's fascia lip, and its plan is the same two
-rectangles `roofExtension()` lays those slabs on. Nothing about its size is
-chosen in `corner.js`, so the box and its eaves cannot drift apart. The two
-extensions must be congruent - they are the same L at two levels - and a
-missing one throws rather than silently building in the wrong place.
+fills exactly the storey between them: its base is the floor slab's top face
+and its top stops below the roof slab's fascia lip.
 
-`buildCorner(style)` returns one group per storey it passes through, and
-`main.js` parents each into the matching level group so level isolation still
-works even though the box is a single object.
+Its plan is mostly the eave's, not the box's. The width is the extension's own
+`armX` run along the facade, so the box covers exactly as much of the balcony as
+the eaves above and below it - the front eaves run over half the balcony, so the
+box is half the balcony wide. Only the projection past the wall comes from
+`CORNER_FRAME.covers`, the balcony the box takes in, so the box reaches that
+balcony's edge and the balcony sits inside it. Nothing about the size is chosen
+in `corner.js`, so the box and its eaves cannot drift apart. The two extensions
+must be congruent - they are the same L at two levels - and a missing one
+throws rather than silently building in the wrong place.
+
+The street face of the box is deliberately open: it is a cantilevered frame over
+the balcony, so the balcony parapet is what you see inside it. Do not wall that
+face up or the balcony disappears behind it.
+
+`buildCorner(style)` returns `{ levels, footprint, mats, style }`, with one
+group per storey it passes through; `main.js` parents each into the matching
+level group so level isolation still works even though the box is a single
+object.
 
 Add a new finish by adding a palette to `CORNER_STYLES` and branching in
 `buildBox()`; do not hard-code colours in `corner.js`.
