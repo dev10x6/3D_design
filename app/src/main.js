@@ -300,6 +300,19 @@ cornerButtons.forEach((b) => b.addEventListener('click', () => {
 applyCornerStyle(CORNER_FRAME.style);
 setLevel('all');
 
+// Column tags are sprites parented to the ground-floor group, so they hide with
+// that floor automatically; this just toggles their visibility.
+const columnTags = [];
+building.traverse((o) => { if (o.isSprite) columnTags.push(o); });
+const tagsBtn = document.getElementById('btnColumnTags');
+function setColumnTags(on) {
+  for (const t of columnTags) t.visible = on;
+  tagsBtn.classList.toggle('active', on);
+  tagsBtn.setAttribute('aria-pressed', String(on));
+}
+tagsBtn.addEventListener('click', () => setColumnTags(!tagsBtn.classList.contains('active')));
+setColumnTags(false);
+
 const azEl = document.getElementById('sunAz');
 const elEl = document.getElementById('sunEl');
 const syncSun = () => {
@@ -327,6 +340,70 @@ document.getElementById('btnPanels').addEventListener('click', (e) => {
   e.currentTarget.classList.toggle('active', document.body.classList.contains('hide-ui'));
 });
 
+// ---------- Collapsible panels ----------
+const COLLAPSED_KEY = 'viewer.collapsedPanels';
+function readCollapsed() {
+  try {
+    const v = JSON.parse(localStorage.getItem(COLLAPSED_KEY) || '[]');
+    return new Set(Array.isArray(v) ? v : []);
+  } catch { return new Set(); }
+}
+function writeCollapsed(set) {
+  try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...set])); } catch { /* private mode */ }
+}
+const collapsedPanels = readCollapsed();
+const phone = window.matchMedia('(max-width: 720px)');
+
+// On a phone the dock would otherwise bury the model, so start with every
+// panel collapsed; the headers still show, and an explicit choice wins.
+if (!localStorage.getItem(COLLAPSED_KEY) && phone.matches) {
+  document.querySelectorAll('[data-collapse]').forEach((c) => collapsedPanels.add(c.dataset.collapse));
+}
+
+function setCollapsed(panel, collapse, isCollapsed) {
+  panel.classList.toggle('collapsed', isCollapsed);
+  collapse.textContent = isCollapsed ? '+' : '−';
+  collapse.setAttribute('aria-expanded', String(!isCollapsed));
+  collapse.title = isCollapsed ? 'Expand' : 'Collapse';
+}
+
+document.querySelectorAll('[data-collapse]').forEach((collapse) => {
+  const panel = document.getElementById(collapse.dataset.collapse);
+  if (!panel) return;
+  setCollapsed(panel, collapse, collapsedPanels.has(panel.id));
+  collapse.addEventListener('click', () => {
+    const next = !panel.classList.contains('collapsed');
+    setCollapsed(panel, collapse, next);
+    if (next) collapsedPanels.add(panel.id); else collapsedPanels.delete(panel.id);
+    writeCollapsed(collapsedPanels);
+    stackCornerPanel();
+    refitActiveView();
+  });
+});
+
+// Collapsing changes how much of the screen the model gets, so re-fit an
+// orthographic view instead of leaving it cropped.
+function refitActiveView() {
+  if (activeView && VIEWS[activeView] && VIEWS[activeView].ortho) {
+    frameOrtho(activeView);
+  }
+}
+
+// The corner panel has no fixed bottom, because the sun panel above it changes
+// height as it collapses; on the phone the dock handles stacking instead.
+const sunPanel = document.getElementById('sun');
+const cornerPanel = document.getElementById('corner');
+function stackCornerPanel() {
+  if (!sunPanel || !cornerPanel) return;
+  if (window.matchMedia('(max-width: 720px)').matches) {
+    cornerPanel.style.bottom = '';
+    return;
+  }
+  cornerPanel.style.bottom = `${sunPanel.getBoundingClientRect().height + 18 + 10}px`;
+}
+window.addEventListener('resize', stackCornerPanel);
+stackCornerPanel();
+
 document.getElementById('btnScreenshot').addEventListener('click', () => {
   renderer.render(scene, camera);
   const a = document.createElement('a');
@@ -338,13 +415,19 @@ document.getElementById('btnScreenshot').addEventListener('click', () => {
 document.getElementById('btnGlb').addEventListener('click', () => {
   const exporter = new GLTFExporter();
   const root = new THREE.Group();
-  root.add(building.clone(true));
+  const copy = building.clone(true);
+  // glTF has no sprite primitive and the exporter ignores them, so drop the
+  // column tags instead of exporting a model with dangling empty nodes.
+  copy.traverse((o) => {
+    if (o.isSprite) o.visible = false;
+  });
+  root.add(copy);
   exporter.parse(root, (buf) => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([buf], { type: 'model/gltf-binary' }));
     a.download = 'rajib-bisoi-building.glb';
     a.click();
-  }, (err) => console.error(err), { binary: true });
+  }, (err) => console.error(err), { binary: true, onlyVisible: true });
 });
 
 // Walk-around: orbit the camera continuously so every facade can be reviewed.
@@ -428,4 +511,4 @@ function tick() {
 }
 tick();
 
-window.__viewer = { scene, persp, ortho, renderer, controls, building, site, flyTo, setLevel, applyCornerStyle, get corner() { return corner; }, get camera() { return camera; } };
+window.__viewer = { scene, persp, ortho, renderer, controls, building, site, flyTo, setLevel, applyCornerStyle, setColumnTags, get columnTags() { return columnTags; }, get corner() { return corner; }, get camera() { return camera; } };

@@ -56,6 +56,18 @@ result survives the sandbox being torn down.
 geometry, camera framing and level readouts all derive from it. Change a
 number there rather than in `building.js` or `main.js`.
 
+`GROUND_COLUMNS` is the one list that came straight off the drawing rather than
+from a round number. It holds the 33 ground-floor columns as the plan numbers
+them, C1-C33, each with its measured section size: 12 across the front bay, 12
+across the rear bay, 4 around the staircase, 4 around the lift and 1 standing
+alone on the west edge beside the stair. `code` is a directional alias
+(`FR`/`BR` + row counted from the street + `L`/`C`/`R`; `ST`/`LF`/`SG`) so a
+column can be named without quoting a drawing number. Positions are column
+centres in feet from the west and rear walls, taken from the centre-line plan
+by matching each `C<n>` label to the nearest column section. Do not re-space
+them onto a tidy grid - the drawing is not a tidy grid, and the stair and lift
+clusters are what the enclosures below are built around.
+
 Orientation: `+Z` is the front, towards the street, so the front facade sits at
 `FRONT_Z` (= depth) and the rear at `REAR_Z` (= 0). Use those two constants
 rather than a bare `0` or `depth`, and remember that `+X` is east, which is
@@ -100,10 +112,19 @@ object.
 Add a new finish by adding a palette to `CORNER_STYLES` and branching in
 `buildBox()`; do not hard-code colours in `corner.js`.
 
-The ground floor is deliberately unfinished: open structure with the stilt
-columns plus the staircase and lift enclosures, and no perimeter walls or rooms
-yet. Do not add walls back to the `level.id === 'GF'` branch without checking
-with the owner — the plans show rooms there, but the building is not built out.
+The ground floor is deliberately unfinished: open structure with the 33
+columns from `GROUND_COLUMNS` plus the staircase and lift enclosures, and no
+perimeter walls or rooms yet. Do not add walls back to the `level.id === 'GF'`
+branch without checking with the owner — the plans show rooms there, but the
+building is not built out.
+
+The control panels all collapse through the shared `.panel-head` /
+`.panel-body` markup and the `[data-collapse]` handler in `main.js`; the open or
+closed state persists in `localStorage`. Below 720px wide they stop being
+separate fixed panels and stack into `#dock`, a single scrollable bottom sheet,
+and default to collapsed so the model is not buried. `#corner` has no fixed
+`bottom` because it is stacked above `#sun`, whose height changes as it
+collapses — `stackCornerPanel()` measures it on resize and on every toggle.
 
 ## Deployment
 

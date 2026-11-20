@@ -19,6 +19,14 @@ build step, no `npm install`.
 - **Aerial and Roof plan.**
 - **Walk around** — continuous turntable orbit to review every facade.
 - **Level isolation** — show Ground, First, Second or Third floor alone.
+- **Pillar names** — "Show pillar names" in the Level isolation panel tags each
+  ground-floor column with its drawing number, C1 to C33. The tags are
+  sprites parented to the ground-floor group, so they appear and hide with that
+  floor; they are left out of the GLB export, which has no sprite primitive.
+- **Collapsible panels** — every control panel collapses to its title bar, and
+  the choice is remembered. On a phone the panels start collapsed and stack
+  into one bottom sheet, so the building fills the screen instead of being
+  covered by the controls.
 - **Sun controls** — azimuth and elevation sliders drive the directional
   light and the shadows, so you can check the design at different times of
   day.

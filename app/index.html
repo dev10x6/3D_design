@@ -30,6 +30,21 @@
     border-radius: 16px; box-shadow: 0 18px 46px rgba(0, 0, 0, 0.42);
   }
 
+  /* Wrapper exists only so the phone layout can stack the panels; on wider
+     screens it collapses out of the layout and each panel keeps its own
+     fixed position. */
+  #dock { display: contents; }
+
+  /* ---------- Collapsible panels ---------- */
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .panel-head .grp-label { margin: 0; }
+  .collapse {
+    flex: none; width: 24px; height: 22px; padding: 0; line-height: 1;
+    font-size: 14px; font-weight: 700; border-radius: 7px; color: #c3d0db;
+  }
+  .panel.collapsed .panel-body { display: none; }
+  .panel.collapsed .panel-head { margin-bottom: 0; }
+
   /* ---------- Title ---------- */
   #title { top: 18px; left: 18px; padding: 15px 20px 14px; max-width: 340px; }
   #title h1 { margin: 0; font-size: 15.5px; letter-spacing: 0.035em; text-transform: uppercase; font-weight: 650; }
@@ -63,6 +78,7 @@
 
   /* ---------- Levels ---------- */
   #levels { left: 18px; bottom: 18px; padding: 12px; width: 268px; }
+  #corner { right: 18px; padding: 12px 14px; width: 218px; }
   #levelInfo {
     margin-top: 10px; padding: 10px 11px; border-radius: 10px;
     background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.07);
@@ -115,8 +131,40 @@
     #title { max-width: 210px; }
     #title p { display: none; }
     #levels { width: 210px; }
-    #sun { display: none; }
-    #hint { display: none; }
+  }
+
+  /* ---------- Phone: stack every panel in one scrollable dock ---------- */
+  @media (max-width: 720px) {
+    #title {
+      top: 8px; left: 8px; right: 8px; max-width: none;
+      padding: 9px 12px 8px; border-radius: 12px;
+    }
+    #title h1 { font-size: 12.5px; }
+    #title p, #hint { display: none; }
+    #title .tag { margin-top: 5px; font-size: 9px; padding: 2px 6px; }
+
+    /* A single bottom sheet instead of four fixed panels that overlapped
+       each other and ran off the screen. Collapsed panels are ~40px, so all
+       five headers fit on a phone at once and the model stays visible. */
+    #dock {
+      display: flex; position: fixed; left: 8px; right: 8px; bottom: 8px;
+      z-index: 5; flex-direction: column; gap: 8px;
+      max-height: 52vh; overflow-y: auto; overscroll-behavior: contain;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    #dock .panel {
+      position: static; width: auto; padding: 9px 10px;
+      border-radius: 13px;
+    }
+    #dock .grid { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    #dock .grid.one { grid-template-columns: 1fr; }
+    #dock .grp-label { margin-bottom: 6px; }
+    #dock button { padding: 7px 6px; font-size: 11px; }
+    #dock .sep { margin: 8px 0; }
+    #levelInfo { margin-top: 8px; padding: 8px; }
+    #levelInfo span { font-size: 10px; }
+    #viewLabel { margin-top: 8px; padding-top: 7px; }
+    .slider { margin-bottom: 7px; }
   }
 </style>
 </head>
@@ -130,73 +178,99 @@
   <span class="tag">Concept B · Revised 1</span>
 </div>
 
-<div id="views" class="panel">
-  <div class="grp-label">Orthographic elevations</div>
-  <div class="grid">
-    <button data-view="front">Front</button>
-    <button data-view="rear">Rear</button>
-    <button data-view="left">West</button>
-    <button data-view="right">East</button>
+<div id="dock">
+  <div id="views" class="panel">
+    <div class="panel-head">
+      <div class="grp-label">Orthographic elevations</div>
+      <button class="collapse" data-collapse="views" aria-expanded="true" aria-controls="views-body" title="Collapse">−</button>
+    </div>
+    <div class="panel-body" id="views-body">
+    <div class="grid">
+      <button data-view="front">Front</button>
+      <button data-view="rear">Rear</button>
+      <button data-view="left">West</button>
+      <button data-view="right">East</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grp-label">Three-quarter</div>
+    <div class="grid">
+      <button data-view="frontLeft">Front L</button>
+      <button data-view="frontRight">Front R</button>
+      <button data-view="rearLeft">Rear L</button>
+      <button data-view="rearRight">Rear R</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grp-label">Overview</div>
+    <div class="grid">
+      <button data-view="aerial">Aerial</button>
+      <button data-view="top">Plan</button>
+    </div>
+    <div id="viewLabel">Front left</div>
+    </div>
   </div>
-  <div class="sep"></div>
-  <div class="grp-label">Three-quarter</div>
-  <div class="grid">
-    <button data-view="frontLeft">Front L</button>
-    <button data-view="frontRight">Front R</button>
-    <button data-view="rearLeft">Rear L</button>
-    <button data-view="rearRight">Rear R</button>
-  </div>
-  <div class="sep"></div>
-  <div class="grp-label">Overview</div>
-  <div class="grid">
-    <button data-view="aerial">Aerial</button>
-    <button data-view="top">Plan</button>
-  </div>
-  <div id="viewLabel">Front left</div>
-</div>
 
-<div id="levels" class="panel">
-  <div class="grp-label">Level isolation</div>
-  <div class="grid">
-    <button data-level="all" class="active">All</button>
-    <button data-level="GF">Ground</button>
-    <button data-level="F1">First</button>
-    <button data-level="F2">Second</button>
-    <button data-level="F3">Third</button>
+  <div id="levels" class="panel">
+    <div class="panel-head">
+      <div class="grp-label">Level isolation</div>
+      <button class="collapse" data-collapse="levels" aria-expanded="true" aria-controls="levels-body" title="Collapse">−</button>
+    </div>
+    <div class="panel-body" id="levels-body">
+    <div class="grid">
+      <button data-level="all" class="active">All</button>
+      <button data-level="GF">Ground</button>
+      <button data-level="F1">First</button>
+      <button data-level="F2">Second</button>
+      <button data-level="F3">Third</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grid one">
+      <button id="btnColumnTags" aria-pressed="false">Show pillar names</button>
+    </div>
+    <div id="levelInfo"></div>
+    </div>
   </div>
-  <div id="levelInfo"></div>
-</div>
 
-<div id="corner" class="panel">
-  <div class="grp-label">Third-floor corner box</div>
-  <div class="grid">
-    <button data-corner="wood" class="active">Wood &amp; planters</button>
-    <button data-corner="darkBox">Dark box</button>
-    <button data-corner="none">Off</button>
+  <div id="corner" class="panel">
+    <div class="panel-head">
+      <div class="grp-label">Third-floor corner box</div>
+      <button class="collapse" data-collapse="corner" aria-expanded="true" aria-controls="corner-body" title="Collapse">−</button>
+    </div>
+    <div class="panel-body" id="corner-body">
+    <div class="grid">
+      <button data-corner="wood" class="active">Wood &amp; planters</button>
+      <button data-corner="darkBox">Dark box</button>
+      <button data-corner="none">Off</button>
+    </div>
+    </div>
   </div>
-</div>
 
-<div id="sun" class="panel">
-  <div class="grp-label">Sun &amp; display</div>
-  <div class="slider">
-    <div class="row"><span>Azimuth</span><b id="sunAzVal">145°</b></div>
-    <input id="sunAz" type="range" min="0" max="360" step="1" value="145" />
-  </div>
-  <div class="slider">
-    <div class="row"><span>Elevation</span><b id="sunElVal">46°</b></div>
-    <input id="sunEl" type="range" min="6" max="88" step="1" value="46" />
-  </div>
-  <div class="grid">
-    <button id="btnShadows" class="active">Shadows</button>
-    <button id="btnAutoRotate">Orbit</button>
-    <button id="btnTurntable">Walk around</button>
-    <button id="btnReset">Reset</button>
-    <button id="btnPanels">Hide UI</button>
-  </div>
-  <div class="sep"></div>
-  <div class="grid">
-    <button id="btnScreenshot">PNG</button>
-    <button id="btnGlb">GLB</button>
+  <div id="sun" class="panel">
+    <div class="panel-head">
+      <div class="grp-label">Sun &amp; display</div>
+      <button class="collapse" data-collapse="sun" aria-expanded="true" aria-controls="sun-body" title="Collapse">−</button>
+    </div>
+    <div class="panel-body" id="sun-body">
+    <div class="slider">
+      <div class="row"><span>Azimuth</span><b id="sunAzVal">145°</b></div>
+      <input id="sunAz" type="range" min="0" max="360" step="1" value="145" />
+    </div>
+    <div class="slider">
+      <div class="row"><span>Elevation</span><b id="sunElVal">46°</b></div>
+      <input id="sunEl" type="range" min="6" max="88" step="1" value="46" />
+    </div>
+    <div class="grid">
+      <button id="btnShadows" class="active">Shadows</button>
+      <button id="btnAutoRotate">Orbit</button>
+      <button id="btnTurntable">Walk around</button>
+      <button id="btnReset">Reset</button>
+      <button id="btnPanels">Hide UI</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grid">
+      <button id="btnScreenshot">PNG</button>
+      <button id="btnGlb">GLB</button>
+    </div>
+    </div>
   </div>
 </div>
 

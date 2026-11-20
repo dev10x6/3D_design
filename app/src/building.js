@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, STILT_COLUMNS, ROOF_EXTENSIONS, FRONT_Z } from './spec.js';
+import { BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, GROUND_COLUMNS, ROOF_EXTENSIONS, FRONT_Z } from './spec.js';
 
 const T = BUILDING.wallT;
 
@@ -37,6 +37,54 @@ function box(parent, w, h, d, x, y, z, mat) {
   m.receiveShadow = true;
   parent.add(m);
   return m;
+}
+
+// Column tags. Drawn to a canvas rather than DOM or font geometry so the
+// labels need no extra vendored file and no build step, and so they stay
+// legible at any camera distance (sprites always face the viewer).
+function labelSprite(text) {
+  const pad = 16;
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `bold ${size}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+  const w = Math.ceil(ctx.measureText(text).width) + pad * 2;
+  const h = size + pad * 2;
+  canvas.width = w;
+  canvas.height = h;
+
+  const c = canvas.getContext('2d');
+  c.font = `bold ${size}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillStyle = 'rgba(16, 22, 28, 0.86)';
+  const r = 26;
+  c.beginPath();
+  c.moveTo(r, 0);
+  c.arcTo(w, 0, w, h, r);
+  c.arcTo(w, h, 0, h, r);
+  c.arcTo(0, h, 0, 0, r);
+  c.arcTo(0, 0, w, 0, r);
+  c.closePath();
+  c.fill();
+  c.strokeStyle = 'rgba(217, 163, 83, 0.9)';
+  c.lineWidth = 7;
+  c.stroke();
+  c.fillStyle = '#f6e7cd';
+  c.fillText(text, w / 2, h / 2 + 2);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthTest: false, depthWrite: false,
+  }));
+  // Sized in world feet so the tag reads against the column it names; a
+  // fraction of the canvas would make it many times the column's own width.
+  const worldHeight = 1.2;
+  const scale = worldHeight / h;
+  sprite.scale.set(w * scale, h * scale, 1);
+  return sprite;
 }
 
 // Solid rectangles of a wall face once the openings are cut out of it.
@@ -278,10 +326,12 @@ export function buildBuilding(mats) {
       // Ground floor is still open structure: no rooms built yet. Only the
       // columns carrying the floors above, plus the staircase and lift
       // enclosures, which are the two things that already exist.
-      for (const z of STILT_COLUMNS.zs) {
-        for (const x of STILT_COLUMNS.xs) {
-          box(g, 1.1, h, 1.1, x, y0 + h / 2, z, mats.concrete);
-        }
+      for (const c of GROUND_COLUMNS) {
+        box(g, c.w, h, c.d, c.x, y0 + h / 2, c.z, mats.concrete);
+        const tag = labelSprite(c.id.trim());
+        tag.position.set(c.x, y0 + h * 0.55, c.z);
+        tag.renderOrder = 10;
+        g.add(tag);
       }
 
       // Staircase enclosure: three walls, open at the front for access.
