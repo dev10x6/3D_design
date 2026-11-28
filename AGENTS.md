@@ -87,6 +87,14 @@ floor. Each slab sits flush with the top of the roof over that level and starts
 at that slab's outer edge; keep it that way, or the extension will z-fight with
 the roof it abuts.
 
+`depth` is the band's projection out past that edge, and `armW` is the width of
+the return down the side wall; they are independent, so an eave can be deep over
+the facade and narrow down the side. The third-floor front-west eave is the
+balcony roof at that corner, so it is set to reach 6'-0" from the wall face -
+the balcony's drawn 4'-0" plus a 2'-0" overhang - with its C1-C4 return left at
+the drawn 2'-0". The band's end follows `armW`, not `depth`, so the band and the
+return still close on the same outer face.
+
 The corner box is separate: `CORNER_FRAME` names the two roof extensions that
 bracket it and the finish, and `CORNER_STYLES` holds the two palettes, while
 `app/src/corner.js` builds it.

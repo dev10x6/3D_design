@@ -110,9 +110,14 @@ export const BALCONIES = {
 // so the eave adds to the roof that is already there.
 // The front eaves cover only half the facade - the half over the balcony they
 // serve - so armX is half the width, not the whole 27'-1".
+// `depth` is how far the band projects out past the facade; `armW` is how wide
+// the return is down the side wall, and may differ from it. The third-floor
+// front eave is the balcony roof at the west corner, so it reaches 6'-0" from
+// the wall face - the balcony's 4'-0" plus a 2'-0" overhang - while its return
+// down C1-C4 stays the drawn 2'-0".
 export const ROOF_EXTENSIONS = [
   { level: 'F2', from: 'frontWest', depth: 2.0, armX: 13.55, armZ: 17.0 },
-  { level: 'F3', from: 'frontWest', depth: 2.0, armX: 13.55, armZ: 17.0 },
+  { level: 'F3', from: 'frontWest', depth: 6.0 - 0.6, armW: 2.0, armX: 13.55, armZ: 17.0 },
   // The rear eave turns the west corner so it sits over C28, C31 and C32, and
   // runs far enough forward down the west wall to carry the fourth-floor arm.
   { level: 'F3', from: 'rearWest', depth: 2.0, armX: 14.0, armZ: 26.0 },
@@ -161,18 +166,20 @@ export function extensionRects(ext) {
   const W = BUILDING.width;
   const D = BUILDING.depth;
   const { depth, armX, armZ } = ext;
+  const armW = ext.armW ?? depth;
   const front = ext.from.startsWith('front');
   const east = ext.from.endsWith('East');
   const { overhang: ov } = roofDatum(ext.level);
   const span = (a, b) => (a < b ? [a, b] : [b, a]);
 
-  // Band along the facade, sitting outside it.
+  // Band along the facade, sitting outside it. Its end reaches the return's
+  // outer face, which is set by the return width, not by the band's projection.
   const [bz0, bz1] = front ? span(D + ov, D + ov + depth) : span(-ov - depth, -ov);
-  const [bx0, bx1] = east ? span(W - armX, W + ov + depth) : span(-ov - depth, armX);
+  const [bx0, bx1] = east ? span(W - armX, W + ov + armW) : span(-ov - armW, armX);
 
   // Arm down the side wall, starting where the band ends.
   const [az0, az1] = front ? span(D + ov - armZ, D + ov) : span(-ov, -ov + armZ);
-  const [ax0, ax1] = east ? span(W + ov, W + ov + depth) : span(-ov - depth, -ov);
+  const [ax0, ax1] = east ? span(W + ov, W + ov + armW) : span(-ov - armW, -ov);
 
   return {
     front, east, overhang: ov, depth,
