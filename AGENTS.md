@@ -87,13 +87,15 @@ floor. Each slab sits flush with the top of the roof over that level and starts
 at that slab's outer edge; keep it that way, or the extension will z-fight with
 the roof it abuts.
 
-`depth` is the band's projection out past that edge, and `armW` is the width of
-the return down the side wall; they are independent, so an eave can be deep over
-the facade and narrow down the side. The third-floor front-west eave is the
-balcony roof at that corner, so it is set to reach 6'-0" from the wall face -
-the balcony's drawn 4'-0" plus a 2'-0" overhang - with its C1-C4 return left at
-the drawn 2'-0". The band's end follows `armW`, not `depth`, so the band and the
-return still close on the same outer face.
+`faceDepth` is how far the band reaches from the wall face - which is what the
+drawing dimensions - and `armW` is the width of the return down the side wall;
+they are independent, so an eave can be deep over the facade and narrow down the
+side. `depth`, measured from the slab's own edge instead, still works for eaves
+that only project a little. The two west-corner front eaves are the balcony's
+floor and roof there, so both reach 6'-0" from the wall face - the balcony's
+drawn 4'-0" plus a 2'-0" overhang - with the C1-C4 return left at the drawn
+2'-0". The band's end follows `armW`, not `faceDepth`, so the band and the return
+still close on the same outer face.
 
 The corner box is separate: `CORNER_FRAME` names the two roof extensions that
 bracket it and the finish, and `CORNER_STYLES` holds the two palettes, while
@@ -102,21 +104,26 @@ bracket it and the finish, and `CORNER_STYLES` holds the two palettes, while
 The box is made of those two extensions. `floorLevel` is the extension whose
 slab it stands on and `roofLevel` the extension whose slab caps it, so the box
 fills exactly the storey between them: its base is the floor slab's top face
-and its top stops below the roof slab's fascia lip.
+and its walls and capping band together run up to the underside of the roof
+slab.
 
-Its plan is mostly the eave's, not the box's. The width is the extension's own
-`armX` run along the facade, so the box covers exactly as much of the balcony as
-the eaves above and below it - the front eaves run over half the balcony, so the
-box is half the balcony wide. Only the projection past the wall comes from
-`CORNER_FRAME.covers`, the balcony the box takes in, so the box reaches that
-balcony's edge and the balcony sits inside it. Nothing about the size is chosen
-in `corner.js`, so the box and its eaves cannot drift apart. The two extensions
-must be congruent - they are the same L at two levels - and a missing one
-throws rather than silently building in the wrong place.
+Its plan is the eave's, in both directions: the band supplies the depth out from
+the facade and `armX` the run along it, so the box, its floor and its roof close
+on the same outer faces and the balcony sits inside it. Nothing about the size is
+chosen in `corner.js`, so the box and its eaves cannot drift apart. The two
+extensions are both set to reach 6'-0" from the wall face with a 2'-0" return,
+which makes the box 6'-0" deep by 2'-0" wide. A missing extension throws rather
+than silently building in the wrong place.
 
 The street face of the box is deliberately open: it is a cantilevered frame over
 the balcony, so the balcony parapet is what you see inside it. Do not wall that
-face up or the balcony disappears behind it.
+face up or the balcony disappears behind it. The other three faces are closed:
+the side wall runs from the return's far end right on to the box's own front
+face, so the face the band leaves past the wall line is walled too.
+
+The band that caps the box is the box's top. The walls stop at its underside
+instead of running through it, or the two would share faces and fight for the
+same pixels; it then runs up into the roof slab for the same reason.
 
 The side wall is solid except for one large glazed opening, set from
 `CORNER_FRAME.sideWindow`: the insets are measured from the wall's own ends and

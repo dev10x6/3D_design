@@ -110,14 +110,14 @@ export const BALCONIES = {
 // so the eave adds to the roof that is already there.
 // The front eaves cover only half the facade - the half over the balcony they
 // serve - so armX is half the width, not the whole 27'-1".
-// `depth` is how far the band projects out past the facade; `armW` is how wide
-// the return is down the side wall, and may differ from it. The third-floor
-// front eave is the balcony roof at the west corner, so it reaches 6'-0" from
-// the wall face - the balcony's 4'-0" plus a 2'-0" overhang - while its return
-// down C1-C4 stays the drawn 2'-0".
+// `faceDepth` is how far the band reaches from the wall face and `armW` is how
+// wide the return runs down the side wall; they are independent. Both west
+// corner front eaves reach 6'-0" from the wall face - the balcony's 4'-0" plus
+// a 2'-0" overhang - and both returns down C1-C4 stay the drawn 2'-0", so the
+// box between them is 6'-0" deep by 2'-0" wide.
 export const ROOF_EXTENSIONS = [
-  { level: 'F2', from: 'frontWest', depth: 2.0, armX: 13.55, armZ: 17.0 },
-  { level: 'F3', from: 'frontWest', depth: 6.0 - 0.6, armW: 2.0, armX: 13.55, armZ: 17.0 },
+  { level: 'F2', from: 'frontWest', faceDepth: 6.0, armW: 2.0, armX: 13.55, armZ: 17.0 },
+  { level: 'F3', from: 'frontWest', faceDepth: 6.0, armW: 2.0, armX: 13.55, armZ: 17.0 },
   // The rear eave turns the west corner so it sits over C28, C31 and C32, and
   // runs far enough forward down the west wall to carry the fourth-floor arm.
   { level: 'F3', from: 'rearWest', depth: 2.0, armX: 14.0, armZ: 26.0 },
@@ -165,12 +165,15 @@ export function roofDatum(levelId) {
 export function extensionRects(ext) {
   const W = BUILDING.width;
   const D = BUILDING.depth;
-  const { depth, armX, armZ } = ext;
-  const armW = ext.armW ?? depth;
+  const { armX, armZ } = ext;
   const front = ext.from.startsWith('front');
   const east = ext.from.endsWith('East');
   const { overhang: ov } = roofDatum(ext.level);
   const span = (a, b) => (a < b ? [a, b] : [b, a]);
+  // `faceDepth` measures from the wall face, which is what the drawing
+  // dimensions; `depth` measures from the slab's own edge.
+  const depth = ext.faceDepth != null ? ext.faceDepth - ov : ext.depth;
+  const armW = ext.armW ?? depth;
 
   // Band along the facade, sitting outside it. Its end reaches the return's
   // outer face, which is set by the return width, not by the band's projection.
@@ -356,28 +359,22 @@ export function parapetInner() {
 // corner are the box's floor and roof: the F2 one is the slab it stands on, the
 // F3 one is the slab it is capped by, and its sides are built between them.
 //
-// The box reaches out past the eaves to the balcony edge so it encloses that
-// balcony rather than stopping at the wall line. `covers` names the balcony it
-// takes in, and the box's outer face is set from that balcony's own edge, so
-// the two cannot disagree. `lip` is how far the box runs past that edge.
+// The box's plan is the eave's plan: it takes the front eave's run along the
+// facade for its depth and the side eave's run for its return, so the box, its
+// floor and its roof all close on the same outer faces. Nothing here sets a
+// size, so none of them can drift apart.
 //
 //   floorLevel - ROOF_EXTENSIONS level forming the box floor
 //   roofLevel  - ROOF_EXTENSIONS level forming the box roof
 //   from       - which corner it turns; must match both extensions
-//   covers     - id of the balcony the box encloses; sets how far the box
-//                projects to the balcony edge
-//   lip        - projection past that balcony's outer edge
-//
-// The box's width is not set here: it is the eave's own run along the facade,
-// so the box covers exactly as much of the balcony as the eaves above and
-// below it do.
+//   covers     - id of the balcony the box encloses; used to check the box's
+//                run stays over that balcony
 //   style      - which finish to apply: 'wood' or 'darkBox'
 export const CORNER_FRAME = {
   floorLevel: 'F2',
   roofLevel: 'F3',
   from: 'frontWest',
   covers: 'front',
-  lip: 0.4,
   style: 'wood',
   // One large glazed opening in the box's side wall. The insets are measured
   // from the wall's own ends and from its floor and head, so the opening

@@ -1,10 +1,13 @@
 import * as THREE from 'three';
 import {
   BUILDING, OPENINGS, BALCONIES, CORNER_FRAME, CORNER_STYLES, ROOF_EXTENSIONS,
-  EAVE_FASCIA, roofDatum, extensionRects, cornerWallPillar,
+  roofDatum, extensionRects, cornerWallPillar,
 } from './spec.js';
 
-const FASCIA_H = EAVE_FASCIA;
+// Height of the band that caps the box. The walls stop at its underside, so
+// the band reads as the box's top and nothing is coplanar with anything else.
+const CAP_H = 0.9;
+const wallH = (fp) => fp.height - CAP_H;
 
 function cornerMats(styleKey) {
   const s = CORNER_STYLES[styleKey];
@@ -66,25 +69,21 @@ function footprint() {
     );
   }
 
-  const { lip } = CORNER_FRAME;
-
-  // Width comes from the eave's own run along the facade, so the box covers
-  // exactly as much of the balcony as the eaves above and below it. Only the
-  // projection is taken from the balcony, so the box reaches its edge.
+  // The plan is the eave's own run, in both directions: its depth out from the
+  // facade and its width along that facade. The box, its floor and its roof
+  // therefore close on the same outer faces.
   const wallZ = front ? balcony.z0 : balcony.z1;
-  const outerZ = front ? balcony.z1 + lip : balcony.z0 - lip;
+  const outerZ = front
+    ? Math.max(bandRun.z0, bandRun.z1)
+    : Math.min(bandRun.z0, bandRun.z1);
   const band = {
     x0: Math.min(bandRun.x0, bandRun.x1), x1: Math.max(bandRun.x0, bandRun.x1),
     z0: Math.min(wallZ, outerZ), z1: Math.max(wallZ, outerZ),
   };
 
-  // The L's short leg is the eave's return up the side wall.
-  const returnDepth = arm.x1 - arm.x0;
-  const innerSideX = east ? band.x0 + returnDepth : band.x1 - returnDepth;
-  const side = {
-    x0: Math.min(band.x0, innerSideX), x1: Math.max(band.x0, innerSideX),
-    z0: arm.z0, z1: wallZ,
-  };
+  // The L's short leg is the eave's own return, so the box's side takes its
+  // width from the return rather than from the band it turns off.
+  const side = { x0: arm.x0, x1: arm.x1, z0: arm.z0, z1: wallZ };
 
   const base = roofDatum(CORNER_FRAME.floorLevel);
   const top = roofDatum(CORNER_FRAME.roofLevel);
@@ -92,9 +91,10 @@ function footprint() {
   return {
     front, east, band, arm: side, balcony,
     baseY: base.y,
-    // Fills the storey: floor slab top up to just under the roof slab, clearing
-    // the fascia lip that hangs below the eave.
-    height: top.y - BUILDING.slabT - FASCIA_H - base.y,
+    // Fills the storey: floor slab top right up to the underside of the roof
+    // slab, so the box's walls close on the roof instead of stopping short of
+    // the fascia lip that hangs below it.
+    height: top.y - BUILDING.slabT - base.y,
     // Footprint of the pillar the side wall runs out to.
     pillar: cornerWallPillar(),
     floorExt, roofExt,
@@ -107,8 +107,7 @@ function buildBox(parent, fp, styleKey, mats) {
   const { baseY, height, band, arm } = fp;
   const topY = baseY + height;
   const wallT = 0.45;
-  const fasciaH = 0.9;
-  const yMid = baseY + height / 2;
+  const yMid = baseY + wallH(fp) / 2;
 
   // The street face is left open: the box is a cantilevered frame over the
   // balcony, so the balcony parapet is what you see inside it. Only the side
@@ -117,35 +116,37 @@ function buildBox(parent, fp, styleKey, mats) {
 
   // Return walls closing the L at the free end of each arm.
   const endX = fp.east ? band.x0 : band.x1;
-  box(parent, wallT, height, band.z1 - band.z0,
+  box(parent, wallT, wallH(fp), band.z1 - band.z0,
     endX + (fp.east ? wallT / 2 : -wallT / 2), yMid, (band.z0 + band.z1) / 2, mats.cladding);
   const endZ = fp.front ? arm.z0 : arm.z1;
-  box(parent, arm.x1 - arm.x0, height, wallT,
+  box(parent, arm.x1 - arm.x0, wallH(fp), wallT,
     (arm.x0 + arm.x1) / 2, yMid, endZ + (fp.front ? wallT / 2 : -wallT / 2), mats.cladding);
 
   // Corner posts at the open face, so the frame reads as built rather than cut.
   const openZ = fp.front ? band.z1 : band.z0;
   const postIn = 0.3;
   for (const px of [band.x0 + postIn, band.x1 - postIn]) {
-    box(parent, 0.6, height, 0.6, px, yMid,
+    box(parent, 0.6, wallH(fp), 0.6, px, yMid,
       openZ + (fp.front ? -0.3 : 0.3), mats.cladding);
   }
 
-  // Fascia band under the roof extension, reading as the top of the box.
-  rect(parent, band, topY - fasciaH / 2, fasciaH, mats.claddingDark);
-  rect(parent, arm, topY - fasciaH / 2, fasciaH, mats.claddingDark);
+  // Capping band under the roof extension: it is the top of the box, and it
+  // runs up to the slab above, so the walls stop at its underside instead of
+  // passing through it and fighting with it for the same faces.
+  rect(parent, band, topY - CAP_H / 2 + 0.01, CAP_H + 0.02, mats.claddingDark);
+  rect(parent, arm, topY - CAP_H / 2 + 0.01, CAP_H + 0.02, mats.claddingDark);
 
   // Timber soffit lining the underside of the roof, downlights below it.
   for (const r of [band, arm]) {
     rect(parent, { x0: r.x0 + 0.15, x1: r.x1 - 0.15, z0: r.z0 + 0.15, z1: r.z1 - 0.15 },
-      topY - fasciaH - 0.06, 0.12, mats.soffit);
+      topY - CAP_H - 0.06, 0.12, mats.soffit);
   }
-  downlights(parent, fp, topY - fasciaH - 0.14, mats);
+  downlights(parent, fp, topY - CAP_H - 0.14, mats);
 
   if (styleKey === 'wood') {
     windowFrames(parent, fp, mats);
   } else {
-    fins(parent, fp, topY, mats);
+    fins(parent, fp, topY - CAP_H, mats);
     columnBands(parent, fp, mats);
   }
 }
@@ -154,8 +155,9 @@ function buildBox(parent, fp, styleKey, mats) {
 // opening, and a return at its street end so the wall runs out onto the pillar
 // the spec names instead of stopping short of it.
 function sideWall(parent, fp, mats) {
-  const { baseY, height, arm, pillar: p } = fp;
+  const { baseY, arm, pillar: p } = fp;
   const wallT = 0.45;
+  const height = wallH(fp);
   const topY = baseY + height;
   // Outer face of the wall, and its centre line just inside that.
   const outerX = fp.east ? arm.x1 : arm.x0;
@@ -191,6 +193,17 @@ function sideWall(parent, fp, mats) {
   box(parent, 0.14, yHead - ySill, fT, fx, fy, z1 - fT / 2, mats.frame);
   for (let i = 1; i < panes; i++) {
     box(parent, 0.14, yHead - ySill, fT * 0.7, fx, fy, z0 + ((z1 - z0) * i) / panes, mats.frame);
+  }
+
+  // The band projects past the side wall's end, so the wall is carried on to
+  // the box's own front face; without this the box is open along that side.
+  const postFaceZ = fp.front ? fp.band.z1 - 0.6 : fp.band.z0 + 0.6;
+  const armEndZ = fp.front ? arm.z1 : arm.z0;
+  const endRun = Math.abs(postFaceZ - armEndZ);
+  const faceZ = postFaceZ;
+  if (endRun > 0.05) {
+    box(parent, wallT, height, endRun, x, baseY + height / 2,
+      (armEndZ + faceZ) / 2, mats.cladding);
   }
 
   // The wall's street end runs out onto the pillar: a return across from the
@@ -243,7 +256,8 @@ function fins(parent, fp, top, mats) {
 
 // White grooved column bands running the box height below the roof.
 function columnBands(parent, fp, mats) {
-  const { baseY, height, band, arm } = fp;
+  const { baseY, band, arm } = fp;
+  const height = wallH(fp);
   const y = baseY + height / 2;
   const zIn = fp.front ? band.z1 - 0.9 : band.z0 + 0.9;
   const xIn = fp.east ? arm.x1 - 0.9 : arm.x0 + 0.9;

@@ -282,7 +282,9 @@ function roofExtension(parent, ext, mats) {
   const lipH = EAVE_FASCIA;
   const lipY = top - t - lipH / 2 + 0.05;
   const outerZ = band.z0 < 0 ? band.z0 : band.z1;
-  box(g, band.x1 - band.x0, lipH, 0.22, (band.x0 + band.x1) / 2, lipY,
+  // Narrowed a hair at both ends: the walls under it are on the same planes,
+  // and coincident faces would fight for the same pixels.
+  box(g, band.x1 - band.x0 - 0.04, lipH, 0.22, (band.x0 + band.x1) / 2, lipY,
     outerZ + (outerZ < 0 ? 0.11 : -0.11), mats.coping);
   const outerX = arm.x0 < 0 ? arm.x0 : arm.x1;
   box(g, 0.22, lipH, arm.z1 - arm.z0, outerX + (outerX < 0 ? 0.11 : -0.11), lipY,
