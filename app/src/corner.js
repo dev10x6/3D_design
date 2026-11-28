@@ -106,7 +106,7 @@ function footprint() {
 function buildBox(parent, fp, styleKey, mats) {
   const { baseY, height, band, arm } = fp;
   const topY = baseY + height;
-  const wallT = 0.45;
+  const { wallT } = CORNER_FRAME;
   const yMid = baseY + wallH(fp) / 2;
 
   // The street face is left open: the box is a cantilevered frame over the
@@ -133,8 +133,8 @@ function buildBox(parent, fp, styleKey, mats) {
   // Capping band under the roof extension: it is the top of the box, and it
   // runs up to the slab above, so the walls stop at its underside instead of
   // passing through it and fighting with it for the same faces.
-  rect(parent, band, topY - CAP_H / 2 + 0.01, CAP_H + 0.02, mats.claddingDark);
-  rect(parent, arm, topY - CAP_H / 2 + 0.01, CAP_H + 0.02, mats.claddingDark);
+  rect(parent, band, topY - CAP_H / 2, CAP_H, mats.claddingDark);
+  rect(parent, arm, topY - CAP_H / 2, CAP_H, mats.claddingDark);
 
   // Timber soffit lining the underside of the roof, downlights below it.
   for (const r of [band, arm]) {
@@ -143,9 +143,7 @@ function buildBox(parent, fp, styleKey, mats) {
   }
   downlights(parent, fp, topY - CAP_H - 0.14, mats);
 
-  if (styleKey === 'wood') {
-    windowFrames(parent, fp, mats);
-  } else {
+  if (styleKey !== 'wood') {
     fins(parent, fp, topY - CAP_H, mats);
     columnBands(parent, fp, mats);
   }
@@ -156,7 +154,7 @@ function buildBox(parent, fp, styleKey, mats) {
 // the spec names instead of stopping short of it.
 function sideWall(parent, fp, mats) {
   const { baseY, arm, pillar: p } = fp;
-  const wallT = 0.45;
+  const { wallT } = CORNER_FRAME;
   const height = wallH(fp);
   const topY = baseY + height;
   // Outer face of the wall, and its centre line just inside that.
@@ -215,30 +213,6 @@ function sideWall(parent, fp, mats) {
   if (run > 0.05) {
     box(parent, run, height, p.z1 - p.z0, (fromX + toX) / 2, baseY + height / 2,
       (p.z0 + p.z1) / 2, mats.cladding);
-  }
-}
-
-// Extruded white box frames standing off the street face, per the first
-// reference.
-function windowFrames(parent, fp, mats) {
-  const t = 0.22;
-  const proj = 0.44;
-  const { band } = fp;
-  const ops = OPENINGS[CORNER_FRAME.roofLevel].front.filter(
-    (o) => o.type === 'window' && o.a >= band.x0 && o.b <= band.x1,
-  );
-
-  for (const o of ops) {
-    const w = o.b - o.a;
-    const hh = o.head - o.sill;
-    const cu = (o.a + o.b) / 2;
-    const cy = fp.baseY + (o.sill + o.head) / 2;
-    const zc = fp.front ? band.z1 - proj / 2 : band.z0 + proj / 2;
-
-    box(parent, w + 2 * t, t, proj, cu, cy + hh / 2 + t / 2, zc, mats.frame);
-    box(parent, w + 2 * t, t, proj, cu, cy - hh / 2 - t / 2, zc, mats.frame);
-    box(parent, t, hh, proj, o.a - t / 2, cy, zc, mats.frame);
-    box(parent, t, hh, proj, o.b + t / 2, cy, zc, mats.frame);
   }
 }
 

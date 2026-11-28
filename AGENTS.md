@@ -121,6 +121,12 @@ face up or the balcony disappears behind it. The other three faces are closed:
 the side wall runs from the return's far end right on to the box's own front
 face, so the face the band leaves past the wall line is walled too.
 
+Because the box reaches further than the drawn balcony, `balcony()` carries the
+balcony's railing out to the box wherever `cornerCoveredRun()` says the box
+roofs it: the railing then joins the box's side wall at one end and the
+dividing wall at the other instead of stopping at the drawn edge and leaving a
+strip of bare floor inside the box.
+
 The band that caps the box is the box's top. The walls stop at its underside
 instead of running through it, or the two would share faces and fight for the
 same pixels; it then runs up into the roof slab for the same reason.
@@ -145,15 +151,26 @@ level group so level isolation still works even though the box is a single
 object.
 
 The front and rear balconies are covered the same way, in `balconyCover()` in
-`building.js`: a solid ceiling band on the storey above, a banded edge, closed
-ends above the parapet, and a wall standing on the middle row pillar
-(`BALCONY_COVERS.divides` - C2 front, C32 rear) so each balcony reads as two
-covered bays. Every height is read from the floor above, so a cover always sits
-under the slab that caps its storey and lines up with the corner box on the
-third floor. `cornerCoveredRun()` returns the run the corner box already roofs,
-and the covers stop there, so the box and the covers never build a ceiling in
-the same place. The cover's plan is the balcony's own 27'-1" x 4'-0", so the
-balcony keeps its drawn size; only the depth gains `BALCONY_COVERS.lip`.
+`building.js`: one solid band on the storey above, closed ends above the
+parapet, and a wall standing on the middle row pillar (`BALCONY_COVERS.divides`
+- C2 front, C32 rear) so each balcony reads as two covered bays. The band takes
+the same section and the same level as the corner box's capping band - it runs
+up to the underside of the slab above - so a covered bay and the boxed one read
+as one roof across the facade. Every height is read from the floor above.
+`cornerCoveredRun()` returns the run the corner box already roofs, and the
+covers stop there, so the box and the covers never build a ceiling in the same
+place.
+
+The cover's plan is the balcony's own 27'-1" x 4'-0", so the balcony keeps its
+drawn size; only the depth gains `BALCONY_COVERS.lip`, which is small. The one
+roof that reaches further is the C1-C2 bay at the second and third floors: it is
+the balcony's roof there, so it is drawn 6'-0" from the wall face - 4'-0" of
+balcony plus 2'-0" - as a roof extension on the second floor and as the corner
+box on the third. No other roof is 6'-0" wide.
+
+The ends above the parapet are `BALCONY_COVERS.wallT` broad and plaster like the
+rest of the building, so the C2 and C3 ends of a bay read as white walls in
+elevation rather than as thin upstands.
 
 Add a new finish by adding a palette to `CORNER_STYLES` and branching in
 `buildBox()`; do not hard-code colours in `corner.js`.

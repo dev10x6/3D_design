@@ -376,6 +376,8 @@ export const CORNER_FRAME = {
   from: 'frontWest',
   covers: 'front',
   style: 'wood',
+  // Thickness of the box's walls, shared with anything that lines up on them.
+  wallT: 0.45,
   // One large glazed opening in the box's side wall. The insets are measured
   // from the wall's own ends and from its floor and head, so the opening
   // follows the wall when the eave or the balcony changes. `panes` counts the
@@ -416,9 +418,14 @@ export function cornerWallPillar() {
 // everything else is read from the balcony and the pillar.
 export const BALCONY_COVERS = {
   divides: { front: 'C2', rear: 'C32' },
+  // Projection past the balcony's outer edge. Covers stay on the drawn 4'-0"
+  // balcony; only the C1-C2 roofs at the second and third floors reach 6'-0",
+  // and they are built as roof extensions rather than as covers.
   lip: 0.4,
   ceilingT: 0.9,
-  wallT: 0.45,
+  // End walls above the parapet. Broad enough to read as a wall in elevation,
+  // and plaster like the rest of the building rather than a thin upstand.
+  wallT: 0.8,
   // Height of the parapet the end walls start above, so they close the open
   // band over the parapet instead of clashing with the drawn piers.
   parapetTop: 3.7,
@@ -452,7 +459,10 @@ export function cornerCoveredRun(levelId, balconyId) {
   );
   if (!ext) return null;
   const { band } = extensionRects(ext);
-  return { x0: Math.min(band.x0, band.x1), x1: Math.max(band.x0, band.x1) };
+  return {
+    x0: Math.min(band.x0, band.x1), x1: Math.max(band.x0, band.x1),
+    z0: Math.min(band.z0, band.z1), z1: Math.max(band.z0, band.z1),
+  };
 }
 
 // Finish palettes for the two corner treatments, transcribed from the two
