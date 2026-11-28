@@ -117,11 +117,12 @@ balcony changes, and `panes` only splits it into lights. `sideWall()` builds the
 wall as piers and spandrels round that opening rather than as one box, because a
 single box cannot be glazed.
 
-Above the box roof the side wall carries on to the top of the roof-frame column
-named by `CORNER_FRAME.sideWallPillar`, so the wall lands on the beam those
-pillars carry instead of stopping at the box roof. `cornerWallTop()` reads the
-height from `GROUND_COLUMNS` and `ROOF_FRAME`, so the wall and the frame cannot
-drift apart; do not put the height in `corner.js`.
+Above the box roof the wall stops: it does not carry on up. Instead its street
+end runs out onto the pillar named by `CORNER_FRAME.sideWallPillar` — a return
+crosses from the wall to that pillar's footprint, so the wall lands on the
+pillar rather than stopping 2.6 ft short of it in plan. `cornerWallPillar()`
+reads the footprint from `GROUND_COLUMNS`, and the glazing's `endInset` is
+clamped clear of that pier, so neither can drift from the pillar.
 
 `buildCorner(style)` returns `{ levels, footprint, mats, style }`, with one
 group per storey it passes through; `main.js` parents each into the matching

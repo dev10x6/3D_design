@@ -376,25 +376,33 @@ export const CORNER_FRAME = {
   // from the wall's own ends and from its floor and head, so the opening
   // follows the wall when the eave or the balcony changes. `panes` counts the
   // lights between the mullions, `frame` is the width of the frame bars.
-  sideWindow: { endInset: 1.4, sill: 0.9, headInset: 1.1, panes: 4, frame: 0.22 },
-  // The side wall carries on above the box roof to the top of this pillar's
-  // roof-frame column, so the wall reads as tied to the frame it stands under.
+  // `endInset` also keeps the glazing clear of the pier that lands on the
+  // pillar, which is as deep as the pillar's section.
+  sideWindow: { endInset: 1.6, sill: 0.9, headInset: 1.1, panes: 4, frame: 0.22 },
+  // The side wall runs out to this pillar: its street end is carried across to
+  // the pillar's footprint, so the wall lands on the pillar instead of stopping
+  // short of it.
   sideWallPillar: 'C1',
 };
 
 /**
- * Top of the roof-frame column the corner box's side wall rises to, and the
- * pillar it continues. Read from GROUND_COLUMNS and ROOF_FRAME, so the wall
- * lands on the pillar's own top rather than a height repeated here.
+ * Footprint of the pillar the corner box's side wall lands on, read from
+ * GROUND_COLUMNS so the wall cannot drift off the pillar it is carried by.
  */
-export function cornerWallTop() {
+export function cornerWallPillar() {
   const pillar = GROUND_COLUMNS.find((c) => c.id === CORNER_FRAME.sideWallPillar);
   if (!pillar) {
     throw new Error(
       `CORNER_FRAME.sideWallPillar is not a pillar: ${CORNER_FRAME.sideWallPillar}`,
     );
   }
-  return { pillar, top: roofTopFace() + ROOF_FRAME.columnHeight };
+  return {
+    pillar,
+    x0: pillar.x - pillar.w / 2,
+    x1: pillar.x + pillar.w / 2,
+    z0: pillar.z - pillar.d / 2,
+    z1: pillar.z + pillar.d / 2,
+  };
 }
 
 // Finish palettes for the two corner treatments, transcribed from the two

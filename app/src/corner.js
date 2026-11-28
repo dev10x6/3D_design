@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {
   BUILDING, OPENINGS, BALCONIES, CORNER_FRAME, CORNER_STYLES, ROOF_EXTENSIONS,
-  EAVE_FASCIA, roofDatum, extensionRects, cornerWallTop,
+  EAVE_FASCIA, roofDatum, extensionRects, cornerWallPillar,
 } from './spec.js';
 
 const FASCIA_H = EAVE_FASCIA;
@@ -88,7 +88,6 @@ function footprint() {
 
   const base = roofDatum(CORNER_FRAME.floorLevel);
   const top = roofDatum(CORNER_FRAME.roofLevel);
-  const wallTop = cornerWallTop();
 
   return {
     front, east, band, arm: side, balcony,
@@ -96,10 +95,8 @@ function footprint() {
     // Fills the storey: floor slab top up to just under the roof slab, clearing
     // the fascia lip that hangs below the eave.
     height: top.y - BUILDING.slabT - FASCIA_H - base.y,
-    // The side wall carries on past the box roof to the top of its pillar's
-    // roof-frame column.
-    wallTopY: wallTop.top,
-    wallPillar: wallTop.pillar,
+    // Footprint of the pillar the side wall runs out to.
+    pillar: cornerWallPillar(),
     floorExt, roofExt,
   };
 }
@@ -154,17 +151,19 @@ function buildBox(parent, fp, styleKey, mats) {
 }
 
 // The box's side wall: solid piers and spandrels round one large glazed
-// opening, carried on above the box roof to the top of the pillar the spec
-// names, so the wall reads as tied to the roof frame it stands under.
+// opening, and a return at its street end so the wall runs out onto the pillar
+// the spec names instead of stopping short of it.
 function sideWall(parent, fp, mats) {
-  const { baseY, height, arm, wallTopY } = fp;
+  const { baseY, height, arm, pillar: p } = fp;
   const wallT = 0.45;
   const topY = baseY + height;
   // Outer face of the wall, and its centre line just inside that.
   const outerX = fp.east ? arm.x1 : arm.x0;
   const x = outerX + (fp.east ? -wallT / 2 : wallT / 2);
   const out = fp.east ? 1 : -1;
-  const { endInset, sill, headInset, panes, frame: fT } = CORNER_FRAME.sideWindow;
+  const { sill, headInset, panes, frame: fT } = CORNER_FRAME.sideWindow;
+  // The glazing stops clear of the pier that lands on the pillar.
+  const endInset = Math.max(CORNER_FRAME.sideWindow.endInset, p.z1 - p.z0 + 0.1);
 
   const z0 = arm.z0 + endInset;
   const z1 = arm.z1 - endInset;
@@ -194,10 +193,15 @@ function sideWall(parent, fp, mats) {
     box(parent, 0.14, yHead - ySill, fT * 0.7, fx, fy, z0 + ((z1 - z0) * i) / panes, mats.frame);
   }
 
-  // Above the box roof the wall carries on to the pillar's top.
-  if (wallTopY > topY) {
-    box(parent, wallT, wallTopY - topY, arm.z1 - arm.z0, x, (topY + wallTopY) / 2,
-      (arm.z0 + arm.z1) / 2, mats.cladding);
+  // The wall's street end runs out onto the pillar: a return across from the
+  // wall to the pillar's footprint, so the wall is carried by the pillar rather
+  // than stopping short of it.
+  const fromX = fp.east ? arm.x1 - wallT : arm.x0 + wallT;
+  const toX = fp.east ? p.x0 : p.x1;
+  const run = Math.abs(toX - fromX);
+  if (run > 0.05) {
+    box(parent, run, height, p.z1 - p.z0, (fromX + toX) / 2, baseY + height / 2,
+      (p.z0 + p.z1) / 2, mats.cladding);
   }
 }
 
