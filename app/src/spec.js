@@ -405,6 +405,52 @@ export function cornerWallPillar() {
   };
 }
 
+// Balcony covers (concept, not on the drawings). Every front and rear balcony
+// is roofed the way the corner box is roofed - a solid ceiling band on the
+// storey above, closed ends above the parapet - and split in two by a wall
+// standing on the middle row pillar. `divides` names that pillar per balcony;
+// everything else is read from the balcony and the pillar.
+export const BALCONY_COVERS = {
+  divides: { front: 'C2', rear: 'C32' },
+  lip: 0.4,
+  ceilingT: 0.9,
+  wallT: 0.45,
+  // Height of the parapet the end walls start above, so they close the open
+  // band over the parapet instead of clashing with the drawn piers.
+  parapetTop: 3.7,
+};
+
+/**
+ * Footprint of a named ground-floor column, so anything that stands on a pillar
+ * reads its section from the survey instead of repeating it.
+ */
+export function columnFootprint(id) {
+  const column = GROUND_COLUMNS.find((c) => c.id === id);
+  if (!column) throw new Error(`no such column: ${id}`);
+  return {
+    column,
+    x0: column.x - column.w / 2,
+    x1: column.x + column.w / 2,
+    z0: column.z - column.d / 2,
+    z1: column.z + column.d / 2,
+  };
+}
+
+/**
+ * The x-run the corner box already roofs over a balcony, or null. The balcony
+ * covers stop where the box begins so the two never build a ceiling in the same
+ * place.
+ */
+export function cornerCoveredRun(levelId, balconyId) {
+  if (levelId !== CORNER_FRAME.roofLevel || balconyId !== CORNER_FRAME.covers) return null;
+  const ext = ROOF_EXTENSIONS.find(
+    (e) => e.level === CORNER_FRAME.roofLevel && e.from === CORNER_FRAME.from,
+  );
+  if (!ext) return null;
+  const { band } = extensionRects(ext);
+  return { x0: Math.min(band.x0, band.x1), x1: Math.max(band.x0, band.x1) };
+}
+
 // Finish palettes for the two corner treatments, transcribed from the two
 // reference renders.
 export const CORNER_STYLES = {

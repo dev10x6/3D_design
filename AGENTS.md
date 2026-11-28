@@ -129,6 +129,17 @@ group per storey it passes through; `main.js` parents each into the matching
 level group so level isolation still works even though the box is a single
 object.
 
+The front and rear balconies are covered the same way, in `balconyCover()` in
+`building.js`: a solid ceiling band on the storey above, a banded edge, closed
+ends above the parapet, and a wall standing on the middle row pillar
+(`BALCONY_COVERS.divides` - C2 front, C32 rear) so each balcony reads as two
+covered bays. Every height is read from the floor above, so a cover always sits
+under the slab that caps its storey and lines up with the corner box on the
+third floor. `cornerCoveredRun()` returns the run the corner box already roofs,
+and the covers stop there, so the box and the covers never build a ceiling in
+the same place. The cover's plan is the balcony's own 27'-1" x 4'-0", so the
+balcony keeps its drawn size; only the depth gains `BALCONY_COVERS.lip`.
+
 Add a new finish by adding a palette to `CORNER_STYLES` and branching in
 `buildBox()`; do not hard-code colours in `corner.js`.
 

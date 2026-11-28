@@ -4,6 +4,7 @@ import {
   EAVE_FASCIA, ROOF_SLAB_T, ROOF_COPING_T, ROOF_PARAPET,
   STAIR_TANKS, stairRoom, stairTankPositions,
   roofDatum, extensionRects, fourthFloorRects,
+  BALCONY_COVERS, columnFootprint, cornerCoveredRun, CORNER_FRAME, CORNER_STYLES,
 } from './spec.js';
 
 const T = BUILDING.wallT;
@@ -35,7 +36,12 @@ export function makeMaterials() {
   const iron = new THREE.MeshStandardMaterial({ color: 0x4a4d52, roughness: 0.55, metalness: 0.7 });
   const soil = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 1.0 });
   const foliage = new THREE.MeshStandardMaterial({ color: 0x3f6b3a, roughness: 0.9, flatShading: true });
-  return { plaster, plasterShade, plinth, slab, coping, frame, rail, wood, concrete, glass, glassRail, darkGlass, tank, metal, iron, soil, foliage };
+  // The balcony covers take the corner box's finish, so the boxes along the
+  // facade and the box at the corner read as the same element.
+  const corner = CORNER_STYLES[CORNER_FRAME.style];
+  const cladding = new THREE.MeshStandardMaterial({ color: corner.cladding, roughness: 0.72 });
+  const soffit = new THREE.MeshStandardMaterial({ color: corner.soffit, roughness: 0.8 });
+  return { plaster, plasterShade, plinth, slab, coping, frame, rail, wood, concrete, glass, glassRail, darkGlass, tank, metal, iron, soil, foliage, cladding, soffit };
 }
 
 function box(parent, w, h, d, x, y, z, mat) {
@@ -168,6 +174,52 @@ function buildWall(parent, { axis, origin, length, height, openings, y0, mats })
   }
 }
 
+
+// Balcony covers (concept): the front and rear balconies are roofed the way the
+// corner box is roofed - a solid ceiling band on the storey above, its edge
+// banded, closed ends above the parapet - and split in two by a wall standing
+// on the middle row pillar. Heights come from the floor above, so a cover
+// always sits under the slab that caps the storey.
+function balconyCover(parent, b, level, mats) {
+  if (!BALCONY_COVERS.divides[b.id]) return;
+  const next = BUILDING.floors[BUILDING.floors.indexOf(level) + 1];
+  const slabUnder = (next ? next.base : BUILDING.roofBase) - BUILDING.slabT;
+  const top = slabUnder - EAVE_FASCIA;
+  const { ceilingT, wallT, lip, parapetTop } = BALCONY_COVERS;
+  const ceilY = top - ceilingT / 2;
+  const ceilUnder = top - ceilingT;
+
+  const front = b.id === 'front';
+  const wallZ = front ? b.z0 : b.z1;
+  const outerZ = front ? b.z1 + lip : b.z0 - lip;
+  const z0 = Math.min(wallZ, outerZ);
+  const z1 = Math.max(wallZ, outerZ);
+  const cz = (z0 + z1) / 2;
+  const depth = z1 - z0;
+
+  // Stop where the corner box already roofs this balcony.
+  const covered = cornerCoveredRun(level.id, b.id);
+  const x0 = covered ? covered.x1 : b.x0;
+  const x1 = b.x1;
+  const cx = (x0 + x1) / 2;
+
+  box(parent, x1 - x0, ceilingT, depth, cx, ceilY, cz, mats.cladding);
+  box(parent, x1 - x0, EAVE_FASCIA, depth, cx, top + EAVE_FASCIA / 2, cz, mats.coping);
+  box(parent, x1 - x0 - 0.3, 0.12, depth - 0.3, cx, ceilUnder - 0.06, cz, mats.soffit);
+
+  // The wall dividing the balcony, standing on the middle row pillar.
+  const p = columnFootprint(BALCONY_COVERS.divides[b.id]);
+  box(parent, p.x1 - p.x0, ceilUnder - level.base, depth,
+    (p.x0 + p.x1) / 2, (level.base + ceilUnder) / 2, cz, mats.cladding);
+
+  // Close the ends above the parapet so the cover reads as a box.
+  const endY0 = level.base + parapetTop;
+  const endH = ceilUnder - endY0;
+  for (const ex of [x0 + wallT / 2, x1 - wallT / 2]) {
+    box(parent, wallT, endH, depth, ex, endY0 + endH / 2, cz, mats.cladding);
+  }
+}
+
 function balcony(parent, b, level, mats) {
   const { base } = level;
   const g = new THREE.Group();
@@ -203,6 +255,8 @@ function balcony(parent, b, level, mats) {
     // capping rail
     box(g, alongX ? len : 0.42, 0.18, alongX ? 0.42 : len, px, base + railH + 0.09, pz, mats.coping);
   };
+
+  balconyCover(g, b, level, mats);
 
   for (const s of b.sides) {
     // The parapet goes on the outer edge: 'front' balconies project past
