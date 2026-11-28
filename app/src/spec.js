@@ -466,14 +466,14 @@ export function cornerCoveredRun(levelId, balconyId) {
 }
 
 /**
- * Balcony bays given the corner box's treatment - the same 6'-0" projection,
- * a capping band reaching the slab above, walls on the pillars either side and
- * posts at the open face - but in the building's own white rather than the
- * corner's timber. The F3 C2-C3 bay is the corner box's neighbour, so it takes
- * the same roof width and reads as its continuation.
+ * Balcony bays given the corner box's form - a capping band reaching the slab
+ * above, walls on the pillars either side and posts at the open face - but in
+ * the building's own white rather than the corner's timber, and only as deep as
+ * the balcony it roofs. The F3 C2-C3 bay is the corner box's neighbour, so it
+ * reads as its continuation without gaining any projection.
  */
 export const BALCONY_BOXES = [
-  { level: 'F3', balcony: 'front', from: 'C2', to: 'C3', faceDepth: 6.0 },
+  { level: 'F3', balcony: 'front', from: 'C2', to: 'C3', faceDepth: 4.0 },
 ];
 
 /** The boxed bays on a balcony as plan rects, from the pillars' own sections. */
