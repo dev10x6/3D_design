@@ -20,8 +20,8 @@ export function makeMaterials() {
   const rail = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.4, metalness: 0.75 });
   const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a33, roughness: 0.6 });
   const concrete = new THREE.MeshStandardMaterial({ color: 0xd0cabf, roughness: 0.95 });
-  const grey = new THREE.MeshStandardMaterial({ color: 0xa2a7ab, roughness: 0.9 });
-  const greyShade = new THREE.MeshStandardMaterial({ color: 0x8f9499, roughness: 0.95 });
+  const grey = new THREE.MeshStandardMaterial({ color: 0x94989c, roughness: 0.9 });
+  const greyShade = new THREE.MeshStandardMaterial({ color: 0x82868a, roughness: 0.95 });
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0xcfe4ea, roughness: 0.06, metalness: 0.0, transparent: true, opacity: 0.3,
     envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false,
@@ -272,6 +272,12 @@ function balconyBox(parent, bay, level, mats) {
     box(parent, 0.6, h, 0.6, px, level.base + h / 2,
       face + (bay.front ? -0.3 : 0.3), mats.grey);
   }
+
+  // The floor edge under the bay, in the same grey, so the box's bottom reads
+  // grey too and not as a white ledge under a grey frame.
+  const sillH = 0.6;
+  box(parent, w, sillH, 0.4, cx, level.base - sillH / 2,
+    face + (bay.front ? -0.16 : 0.16), mats.grey);
 }
 
 function balcony(parent, b, level, mats) {
