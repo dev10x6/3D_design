@@ -138,11 +138,28 @@ export function buildFourthFloor(mats) {
   box(g, 0.22, lipH, arm.z1 - band.z0, band.x0 + 0.11, lipY, (band.z0 + arm.z1) / 2, mats.coping);
   box(g, arm.x1 - arm.x0, lipH, 0.22, (arm.x0 + arm.x1) / 2, lipY, arm.z1 - 0.11, mats.coping);
 
-  // Parapet along the inner edges, where the room meets the open terrace.
+  // Parapet round the whole roof boundary. The inner runs face the open
+  // terrace; the outer runs sit over the eave edges - rear, west and the arm's
+  // front - so the boundary covers the roof extension to the west instead of
+  // stopping at the fascia.
   const ph = 1.6;
   const topY = top + t;
-  box(g, band.x1 - arm.x1, ph, 0.4, (arm.x1 + band.x1) / 2, topY + ph / 2, band.z1 - 0.2, mats.coping);
-  box(g, 0.4, ph, arm.z1 - band.z1, arm.x1 - 0.2, topY + ph / 2, (band.z1 + arm.z1) / 2, mats.coping);
+  const pw = 0.4;
+
+  // Inner: east face of the band, and the arm's east face.
+  box(g, band.x1 - arm.x1, ph, pw, (arm.x1 + band.x1) / 2, topY + ph / 2, band.z1 - pw / 2, mats.coping);
+  box(g, pw, ph, arm.z1 - band.z1, arm.x1 - pw / 2, topY + ph / 2, (band.z1 + arm.z1) / 2, mats.coping);
+
+  // Outer: rear edge of the band, its west edge, and the front edge of the arm.
+  // These stand on the eave's outer edge, which is where the roof extension
+  // ends, so nothing overhangs the slab it sits on.
+  box(g, band.x1 - band.x0, ph, pw, (band.x0 + band.x1) / 2, topY + ph / 2, band.z0 + pw / 2, mats.coping);
+  box(g, pw, ph, arm.z1 - band.z0, band.x0 + pw / 2, topY + ph / 2, (band.z0 + arm.z1) / 2, mats.coping);
+  box(g, arm.x1 - band.x0, ph, pw, (band.x0 + arm.x1) / 2, topY + ph / 2, arm.z1 - pw / 2, mats.coping);
+
+  // East face of the band, closing the boundary where the room faces the roof
+  // garden.
+  box(g, pw, ph, band.z1 - band.z0, band.x1 - pw / 2, topY + ph / 2, (band.z0 + band.z1) / 2, mats.coping);
 
   const bounds = new THREE.Box3().setFromObject(g);
   return { group: g, bounds };

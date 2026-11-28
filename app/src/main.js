@@ -8,6 +8,7 @@ import { buildCorner } from './corner.js';
 import { buildSite } from './site.js';
 import { buildFourthFloor } from './fourth.js';
 import { buildRoofFrame } from './frame.js';
+import { buildRoofGarden } from './garden.js';
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
@@ -87,6 +88,11 @@ building.userData.floorGroups[FOURTH_FLOOR.id] = fourth.group;
 // a BUILDING.floors entry. It goes on the roof group so it shows and hides with
 // the roof it stands on, and level isolation keeps working unchanged.
 building.getObjectByName('roof').add(buildRoofFrame(mats).group);
+
+// ---------- Roof garden (concept) ----------
+// Not a floor either. It stands on the roof deck and is shown with the roof, so
+// it goes on the roof group for the same reason the frame does.
+building.getObjectByName('roof').add(buildRoofGarden(mats).group);
 
 // ---------- Corner box ----------
 // buildCorner returns one group per storey the box passes through; each goes

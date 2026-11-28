@@ -256,6 +256,94 @@ export const LIFT = { x0: 24.6, x1: 29.9, z0: 41.9, z1: 48.4 };
 
 export const STAIR = { x0: 10.0, x1: 20.6, z0: 39.5, z1: 51.2 };
 
+// The stair enclosure rises out of the main roof as a machine room, and its own
+// roof is the highest flat surface on the building. The water tanks stand on it
+// rather than on the main roof, so the terrace stays clear.
+export const STAIR_ROOM = {
+  // Overhang of the machine room past the stair walls, on every side.
+  margin: 1.0,
+  // Clear height of the machine room above the main roof deck.
+  height: 9.0,
+  roofT: 0.4,
+};
+
+/**
+ * The stair machine room: its plan, the level its roof deck is at, and the
+ * tanks standing on it.
+ *
+ * The plan is the stair walls plus the overhang, which is what building.js has
+ * always drawn, so the room and the tanks cannot disagree about where the roof
+ * is. `roofY` is the top face of the room's roof slab - the surface the tanks
+ * stand on.
+ */
+export function stairRoom() {
+  const { margin, height, roofT } = STAIR_ROOM;
+  const plan = {
+    x0: STAIR.x0 - margin,
+    x1: STAIR.x1 + margin,
+    z0: STAIR.z0 - margin,
+    z1: STAIR.z1 + margin,
+  };
+  plan.w = plan.x1 - plan.x0;
+  plan.d = plan.z1 - plan.z0;
+  plan.cx = (plan.x0 + plan.x1) / 2;
+  plan.cz = (plan.z0 + plan.z1) / 2;
+
+  const base = roofTopFace();
+  const roofY = base + height + roofT;
+
+  return { plan, base, height, roofT, roofY };
+}
+
+// Four tanks on the stair roof, in a 2 x 2 grid. `radius` and `height` are the
+// barrel; the cap is derived in building.js from the same numbers.
+export const STAIR_TANKS = {
+  count: 4,
+  radius: 2.2,
+  height: 4.2,
+  // Clear gap between neighbouring barrels, so the grid is not a tight pack.
+  gap: 0.9,
+};
+
+/**
+ * Centres of the tanks on the stair roof, as [x, z] pairs in a 2 x 2 grid
+ * centred on that roof. `gap` is the clear space between barrels, so the pitch
+ * is two radii plus the gap and the tanks cannot overlap however the size is
+ * changed.
+ */
+export function stairTankPositions() {
+  const { count, radius, gap } = STAIR_TANKS;
+  if (count % 2 !== 0) throw new Error('STAIR_TANKS.count must be even to form a grid');
+  const { plan } = stairRoom();
+  const pitch = 2 * radius + gap;
+  const cols = count / 2;
+  const out = [];
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < 2; j++) {
+      out.push([
+        plan.cx + (i - (cols - 1) / 2) * pitch,
+        plan.cz + (j - 0.5) * pitch,
+      ]);
+    }
+  }
+  return out;
+}
+
+// The roof parapet. `inset` is how far its centre line stands inside the wall
+// line, so the inner face - the usable edge of the deck - is `width / 2` inside
+// that. Anything that has to stop at the parapet reads `parapetInner()` rather
+// than repeating the arithmetic.
+export const ROOF_PARAPET = { width: 0.6, inset: 0.1 };
+
+/** Inner faces of the main roof parapet: the clear rectangle of the deck. */
+export function parapetInner() {
+  const { width, inset } = ROOF_PARAPET;
+  const W = BUILDING.width;
+  const D = BUILDING.depth;
+  const edge = inset - width / 2;
+  return { x0: edge, x1: W - edge, z0: edge, z1: D - edge };
+}
+
 // Corner treatment. An L-shaped cantilevered box wraps the front-west corner,
 // turning the two perpendicular faces there. The two roof extensions at that
 // corner are the box's floor and roof: the F2 one is the slab it stands on, the
@@ -384,6 +472,11 @@ export const ROOF_FRAME = {
   tieCount: 5,
   tieW: 0.45,
   tieD: 0.5,
+  // Iron rods hang from each end of every iron beam down to the third-floor
+  // roof, so the frame is tied back to the building on both sides rather than
+  // standing as a free portal. They land on the roof deck below.
+  rodR: 0.13,
+  rodInset: 0.3,
 };
 
 /**
@@ -432,5 +525,99 @@ export function roofFrameLayout() {
     deck: roofTopFace(),
     columnHeight: ROOF_FRAME.columnHeight,
     beamDepth: ROOF_FRAME.beamDepth,
+  };
+}
+
+// Rooftop garden and greenhouse (concept). The rear-east bay carries it: iron
+// pillars on C26, C27, C33, C32 and C29 rise from the roof deck and hold a
+// glazed roof, so the planting sits under cover rather than on open terrace.
+//
+// The five pillars are given by id and read back from GROUND_COLUMNS, so the
+// iron posts stand exactly on the concrete pillars and follow any correction to
+// the survey. They are all rear-row pillars, so the bay is a plain rectangle
+// between the two rear corner pillars and the middle one.
+export const ROOF_GARDEN = {
+  pillars: ['C26', 'C27', 'C33', 'C32', 'C29'],
+  // Clear height of the iron posts above the roof deck. Set to the roof frame's
+  // own column height so the two roof structures read as one composition.
+  columnHeight: 10.0,
+  columnW: 0.5,
+  // Depth of the glazed roof's edge beam, hung under the glass.
+  beamDepth: 0.7,
+  // How far the glazed roof runs past the pillars, so the beds are under cover
+  // to the edge rather than open to the rain at the perimeter.
+  eaves: 0.8,
+  glassT: 0.12,
+  // Planting bed along the outer walls, inside the posts.
+  bedW: 2.4,
+  bedH: 1.3,
+  // The fourth-floor room's east wall - the garden starts there, not on the
+  // roof edge, because the room occupies the rear-west side of the deck.
+  innerX: 13.765,
+  // Clearance between a post face and that wall, so the two are not coplanar
+  // and cannot z-fight where they meet.
+  wallClear: 0.05,
+  // How far the beds stop short of the glazed roof edge, so they are reachable.
+  bedInset: 0.35,
+};
+
+/**
+ * Plan of the roof garden: the post positions, the rectangle they enclose, and
+ * the glazed roof over it. Building coordinates, feet.
+ *
+ * The five named pillars are all rear-row, so the bay they enclose is a plain
+ * rectangle: C26/C29/C32 down the west side, C27/C33 down the east. The west
+ * side is the fourth-floor room's own east wall - the room's plan is set by
+ * C32's outer face - so the garden's west line is that wall, and the posts on
+ * it stand against the room rather than inside it. They are moved to the wall's
+ * outer face as a group, so the west line stays straight.
+ */
+export function roofGardenLayout() {
+  const cols = ROOF_GARDEN.pillars.map((id) => {
+    const c = GROUND_COLUMNS.find((col) => col.id === id);
+    if (!c) throw new Error(`ROOF_GARDEN names a pillar that is not in GROUND_COLUMNS: ${id}`);
+    return c;
+  });
+
+  const deck = roofTopFace();
+  const { columnHeight, eaves, innerX, columnW, wallClear } = ROOF_GARDEN;
+  const wall = innerX + wallClear;
+
+  // Posts sit on the pillar centres, so each is carried by the pillar below it.
+  // The west line then moves out to the room's east face, because the room
+  // occupies that line; C32's own outer face is what sets it.
+  const posts = cols.map((c) => ({ id: c.id, x: c.x, z: c.z }));
+  const westX = Math.min(...posts.map((p) => p.x));
+  for (const p of posts) {
+    if (p.x === westX) p.x = wall + columnW / 2;
+  }
+
+  const plan = {
+    x0: Math.min(...posts.map((p) => p.x)) - columnW / 2,
+    x1: Math.max(...posts.map((p) => p.x)) + columnW / 2,
+    z0: Math.min(...posts.map((p) => p.z)) - columnW / 2,
+    z1: Math.max(...posts.map((p) => p.z)) + columnW / 2,
+  };
+
+  // The glazed roof overhangs the posts, but it cannot run into the parapet or
+  // through the room, so it is clipped to the room's face and the clear deck.
+  const clear = parapetInner();
+  const roof = {
+    x0: Math.max(plan.x0 - eaves, wall),
+    x1: Math.min(plan.x1 + eaves, clear.x1),
+    z0: Math.max(plan.z0 - eaves, clear.z0),
+    z1: Math.min(plan.z1 + eaves, clear.z1),
+  };
+
+  return {
+    posts,
+    plan,
+    roof,
+    deck,
+    columnHeight,
+    columnW,
+    wall,
+    top: deck + columnHeight,
+    glassT: ROOF_GARDEN.glassT,
   };
 }

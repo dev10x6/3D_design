@@ -91,6 +91,7 @@ app/src/building.js walls, openings, balconies, slabs, roof
 app/src/corner.js   the L-shaped cantilevered corner box (concept)
 app/src/fourth.js   the fourth-floor room (concept)
 app/src/frame.js    the roof frame over pillars C1/C4 and C3/C6 (concept)
+app/src/garden.js   the rooftop garden and greenhouse (concept)
 app/src/site.js     plot, boundary wall, gate, driveway, road
 app/src/main.js     renderer, camera, views, framing, UI wiring
 app/vendor/         Three.js r160 (vendored)

@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import {
   BUILDING, OPENINGS, BALCONIES, LIFT, STAIR, GROUND_COLUMNS, ROOF_EXTENSIONS, FRONT_Z,
-  EAVE_FASCIA, ROOF_SLAB_T, ROOF_COPING_T,
+  EAVE_FASCIA, ROOF_SLAB_T, ROOF_COPING_T, ROOF_PARAPET,
+  STAIR_TANKS, stairRoom, stairTankPositions,
   roofDatum, extensionRects, fourthFloorRects,
 } from './spec.js';
 
@@ -32,7 +33,9 @@ export function makeMaterials() {
   const tank = new THREE.MeshStandardMaterial({ color: 0xeaeaea, roughness: 0.55 });
   const metal = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.35, metalness: 0.85 });
   const iron = new THREE.MeshStandardMaterial({ color: 0x4a4d52, roughness: 0.55, metalness: 0.7 });
-  return { plaster, plasterShade, plinth, slab, coping, frame, rail, wood, concrete, glass, glassRail, darkGlass, tank, metal, iron };
+  const soil = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 1.0 });
+  const foliage = new THREE.MeshStandardMaterial({ color: 0x3f6b3a, roughness: 0.9, flatShading: true });
+  return { plaster, plasterShade, plinth, slab, coping, frame, rail, wood, concrete, glass, glassRail, darkGlass, tank, metal, iron, soil, foliage };
 }
 
 function box(parent, w, h, d, x, y, z, mat) {
@@ -326,7 +329,7 @@ export function buildBuilding(mats) {
   box(roof, W + 1.6, ROOF_COPING_T, D + 1.6, W / 2,
     rb + ROOF_SLAB_T + ROOF_COPING_T / 2, D / 2, mats.coping);
 
-  const pw = 0.6;
+  const pw = ROOF_PARAPET.width;
   const ph = BUILDING.parapet;
   const py = rb + ROOF_SLAB_T + ph / 2;
   const cy2 = rb + ROOF_SLAB_T + ph + 0.11;
@@ -359,22 +362,31 @@ export function buildBuilding(mats) {
     box(roof, pw + 0.35, 0.22, westRun.len, -0.1, cy2, westRun.mid, mats.coping);
   }
 
-  const sw = STAIR.x1 - STAIR.x0 + 2;
-  const sd = STAIR.z1 - STAIR.z0 + 2;
-  const sx = STAIR.x0 - 1 + sw / 2;
-  const sz = STAIR.z0 - 1 + sd / 2;
-  box(roof, sw, 9, sd, sx, rb + 4.6, sz, mats.plaster);
-  box(roof, sw + 0.6, 0.4, sd + 0.6, sx, rb + 9.2, sz, mats.coping);
+  // Stair machine room. Its plan, height and roof level all come from
+  // stairRoom(), because the water tanks stand on that roof and the two must
+  // not disagree about where it is.
+  const sr = stairRoom();
+  box(roof, sr.plan.w, sr.height, sr.plan.d, sr.plan.cx,
+    sr.base + sr.height / 2, sr.plan.cz, mats.plaster);
+  box(roof, sr.plan.w + 0.6, sr.roofT, sr.plan.d + 0.6, sr.plan.cx,
+    sr.base + sr.height + sr.roofT / 2, sr.plan.cz, mats.coping);
   box(roof, LIFT.x1 - LIFT.x0 + 1, 8, LIFT.z1 - LIFT.z0 + 1,
     (LIFT.x0 + LIFT.x1) / 2, rb + 4.1, (LIFT.z0 + LIFT.z1) / 2, mats.plaster);
 
-  for (const [tx, tz] of [[6.5, D - 12], [20.5, D - 74]]) {
-    const t = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 4.2, 24), mats.tank);
-    t.position.set(tx, rb + 2.1, tz);
+  // Water tanks on the stair roof, in a 2 x 2 grid centred on it.
+  for (const [tx, tz] of stairTankPositions()) {
+    const t = new THREE.Mesh(
+      new THREE.CylinderGeometry(STAIR_TANKS.radius, STAIR_TANKS.radius, STAIR_TANKS.height, 24),
+      mats.tank,
+    );
+    t.position.set(tx, sr.roofY + STAIR_TANKS.height / 2, tz);
     t.castShadow = true; t.receiveShadow = true;
     roof.add(t);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 0.8, 24), mats.tank);
-    cap.position.set(tx, rb + 4.6, tz);
+    const cap = new THREE.Mesh(
+      new THREE.CylinderGeometry(STAIR_TANKS.radius * 0.55, STAIR_TANKS.radius * 0.82, 0.8, 24),
+      mats.tank,
+    );
+    cap.position.set(tx, sr.roofY + STAIR_TANKS.height + 0.4, tz);
     cap.castShadow = true;
     roof.add(cap);
   }

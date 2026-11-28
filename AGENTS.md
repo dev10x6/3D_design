@@ -181,6 +181,35 @@ changing the count needs no other edit. The frame stands on `roofTopFace()`,
 which `building.js` also builds the roof slab and coping from — change the deck
 thickness there, not in two places.
 
+Iron rods hang from both ends of every iron beam down to the roof deck, tying
+the frame back to the building instead of leaving it a free portal. Their length
+is derived from the beam underside, so changing `columnHeight` or `beamDepth`
+moves the rods with the beams.
+
+The roof garden (`garden.js`) is the third concept addition: iron posts on C26,
+C27, C33, C32 and C29 hold a glazed roof with planting beds under it. It is on
+the roof group for the same reason as the frame.
+
+`roofGardenLayout()` needs one thing that is easy to get wrong. The named
+pillars are all rear-row, but C32 and C29 sit *inside* the fourth-floor room's
+plan — the room's east wall is set by C32's own outer face — so a post on those
+pillar centres would stand inside the room. The layout moves the whole west line
+of posts out to that wall's face, keeping the line straight; it does not nudge
+the two offending posts alone, which would leave a staggered row. The glazed
+roof is then clipped to `parapetInner()` and to the room's face, so it cannot
+pass through the parapet capping or the room's walls.
+
+The water tanks stand on the stair machine room's roof, not on the main roof, so
+the terrace stays clear. `stairRoom()` owns that roof's plan and height and
+`building.js` builds the room from it; the tanks read `roofY` back from the same
+function, so the room and the tanks cannot disagree. `stairTankPositions()`
+derives the 2 x 2 grid from `STAIR_TANKS.radius` and `gap` rather than listing
+centres, so the tanks cannot overlap if they are resized.
+
+`parapetInner()` and `ROOF_PARAPET` are the single source for the parapet's
+width and inset. The garden clips to them, so do not reintroduce the literal
+0.6 / 0.1 that used to be in `building.js`.
+
 Site furniture has to follow the `+Z` front: the road, kerb, gate piers and
 gate leaves all sit at the front wall (`PLOT.depth`), and the garden is behind
 the rear wall at low `z`. An earlier orientation flip moved the boundary walls

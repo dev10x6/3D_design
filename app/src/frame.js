@@ -32,7 +32,7 @@ export function buildRoofFrame(mats) {
   g.name = 'roof-frame';
 
   const { beams, ties, deck, columnHeight, beamDepth } = roofFrameLayout();
-  const { tieW, tieD } = ROOF_FRAME;
+  const { tieW, tieD, rodR, rodInset } = ROOF_FRAME;
   const top = deck + columnHeight;
 
   for (const b of beams) {
@@ -53,6 +53,25 @@ export function buildRoofFrame(mats) {
 
   for (const z of ties) {
     box(g, x1 - x0, tieD, tieW, (x0 + x1) / 2, y, z, mats.iron);
+  }
+
+  // Iron rods down from each end of every iron beam to the third-floor roof, so
+  // the frame is tied back to the building on both sides. They hang from the
+  // underside of the beam and run to the deck it stands on.
+  const rodTop = y - tieD / 2;
+  const rodLen = rodTop - deck;
+  const rodX = [x0 + rodInset, x1 - rodInset];
+
+  for (const z of ties) {
+    for (const x of rodX) {
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(rodR, rodR, rodLen, 12), mats.iron);
+      rod.position.set(x, deck + rodLen / 2, z);
+      rod.castShadow = true;
+      rod.receiveShadow = true;
+      g.add(rod);
+      // Anchor plate where the rod lands, so it reads as fixed to the roof.
+      box(g, rodR * 5, 0.12, rodR * 5, x, deck + 0.06, z, mats.iron);
+    }
   }
 
   g.userData.level = {
