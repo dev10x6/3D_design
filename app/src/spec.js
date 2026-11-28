@@ -465,6 +465,55 @@ export function cornerCoveredRun(levelId, balconyId) {
   };
 }
 
+/**
+ * Balcony bays given the corner box's treatment - the same 6'-0" projection,
+ * a capping band reaching the slab above, walls on the pillars either side and
+ * posts at the open face - but in the building's own white rather than the
+ * corner's timber. The F3 C2-C3 bay is the corner box's neighbour, so it takes
+ * the same roof width and reads as its continuation.
+ */
+export const BALCONY_BOXES = [
+  { level: 'F3', balcony: 'front', from: 'C2', to: 'C3', faceDepth: 6.0 },
+];
+
+/** The boxed bays on a balcony as plan rects, from the pillars' own sections. */
+export function boxedBays(levelId, balconyId) {
+  return BALCONY_BOXES
+    .filter((b) => b.level === levelId && b.balcony === balconyId)
+    .map((b) => {
+      const balcony = BALCONIES[levelId].find((x) => x.id === balconyId);
+      const front = balconyId !== 'rear';
+      const wallZ = front ? balcony.z0 : balcony.z1;
+      const face = wallZ + (front ? b.faceDepth : -b.faceDepth);
+      const from = columnFootprint(b.from);
+      const to = columnFootprint(b.to);
+      return {
+        front,
+        x0: from.x1,
+        x1: to.x1,
+        z0: Math.min(wallZ, face),
+        z1: Math.max(wallZ, face),
+      };
+    });
+}
+
+/**
+ * How far the roof over a balcony reaches at a level: the cover's own line,
+ * or the face of the box the balcony is boxed by, whichever is further out.
+ * The dividing wall and the railing both read it, so they meet the roof.
+ */
+export function balconyRoofFace(levelId, balconyId) {
+  const balcony = BALCONIES[levelId].find((x) => x.id === balconyId);
+  const front = balconyId !== 'rear';
+  let z = front ? balcony.z1 + BALCONY_COVERS.lip : balcony.z0 - BALCONY_COVERS.lip;
+  const covered = cornerCoveredRun(levelId, balconyId);
+  if (covered) z = front ? Math.max(z, covered.z1) : Math.min(z, covered.z0);
+  for (const bay of boxedBays(levelId, balconyId)) {
+    z = front ? Math.max(z, bay.z1) : Math.min(z, bay.z0);
+  }
+  return z;
+}
+
 // Finish palettes for the two corner treatments, transcribed from the two
 // reference renders.
 export const CORNER_STYLES = {

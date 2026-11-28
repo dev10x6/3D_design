@@ -162,11 +162,19 @@ covers stop there, so the box and the covers never build a ceiling in the same
 place.
 
 The cover's plan is the balcony's own 27'-1" x 4'-0", so the balcony keeps its
-drawn size; only the depth gains `BALCONY_COVERS.lip`, which is small. The one
-roof that reaches further is the C1-C2 bay at the second and third floors: it is
-the balcony's roof there, so it is drawn 6'-0" from the wall face - 4'-0" of
-balcony plus 2'-0" - as a roof extension on the second floor and as the corner
-box on the third. No other roof is 6'-0" wide.
+drawn size; only the depth gains `BALCONY_COVERS.lip`, which is small. The two
+roofs that reach further are the C1-C2 bay at the second and third floors and
+the C2-C3 bay at the third: they are the balcony's roof there, so they are drawn
+6'-0" from the wall face - 4'-0" of balcony plus 2'-0". The second floor's is a
+roof extension, the third floor's are boxes. No other roof is 6'-0" wide.
+
+A bay listed in `BALCONY_BOXES` takes the corner box's treatment in white -
+`balconyBox()` in `building.js`: the same projection, a capping band reaching
+the slab above, walls on the pillars either side and posts at the open face.
+`boxedBays()` hands back the plan rect, `balconyRoofFace()` reports how far the
+roof reaches so the dividing wall and the railing meet it, and both the cover
+and the railing use `clearSpans()` to stay clear of the runs a box has taken.
+Adding a bay is one entry there, not new geometry.
 
 The ends above the parapet are `BALCONY_COVERS.wallT` broad and plaster like the
 rest of the building, so the C2 and C3 ends of a bay read as white walls in

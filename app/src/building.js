@@ -5,6 +5,7 @@ import {
   STAIR_TANKS, stairRoom, stairTankPositions,
   roofDatum, extensionRects, fourthFloorRects,
   BALCONY_COVERS, columnFootprint, cornerCoveredRun, CORNER_FRAME,
+  boxedBays, balconyRoofFace,
 } from './spec.js';
 
 const T = BUILDING.wallT;
@@ -170,6 +171,24 @@ function buildWall(parent, { axis, origin, length, height, openings, y0, mats })
 }
 
 
+// The parts of [x0, x1] left over once the given runs are taken out, so a
+// cover and a box never build the same ceiling twice.
+function clearSpans(x0, x1, taken) {
+  let spans = [[x0, x1]];
+  for (const [t0, t1] of taken) {
+    const next = [];
+    for (const [s0, s1] of spans) {
+      if (t1 <= s0 || t0 >= s1) next.push([s0, s1]);
+      else {
+        if (t0 > s0) next.push([s0, t0]);
+        if (t1 < s1) next.push([t1, s1]);
+      }
+    }
+    spans = next;
+  }
+  return spans.filter(([a, b]) => b - a > 0.5);
+}
+
 // Balcony covers (concept): the front and rear balconies are roofed the way the
 // corner box is roofed - a solid ceiling band on the storey above, its edge
 // banded, closed ends above the parapet - and split in two by a wall standing
@@ -194,25 +213,62 @@ function balconyCover(parent, b, level, mats) {
   const cz = (z0 + z1) / 2;
   const depth = z1 - z0;
 
-  // Stop where the corner box already roofs this balcony.
-  const covered = cornerCoveredRun(level.id, b.id);
-  const x0 = covered ? covered.x1 : b.x0;
-  const x1 = b.x1;
-  const cx = (x0 + x1) / 2;
-
-  box(parent, x1 - x0, bandT, depth, cx, ceilY, cz, mats.plaster);
-  box(parent, x1 - x0 - 0.3, 0.12, depth - 0.3, cx, ceilUnder - 0.06, cz, mats.plasterShade);
-
-  // The wall dividing the balcony, standing on the middle row pillar.
+  // The wall dividing the balcony, standing on the middle row pillar. It runs
+  // out to whatever roofs the balcony deepest, so a boxed bay meets it.
   const p = columnFootprint(BALCONY_COVERS.divides[b.id]);
-  box(parent, p.x1 - p.x0, ceilUnder - level.base, depth,
-    (p.x0 + p.x1) / 2, (level.base + ceilUnder) / 2, cz, mats.plaster);
+  const faceZ = balconyRoofFace(level.id, b.id);
+  const divZ0 = Math.min(wallZ, faceZ);
+  const divZ1 = Math.max(wallZ, faceZ);
+  box(parent, p.x1 - p.x0, ceilUnder - level.base, divZ1 - divZ0,
+    (p.x0 + p.x1) / 2, (level.base + ceilUnder) / 2, (divZ0 + divZ1) / 2, mats.plaster);
 
-  // Close the ends above the parapet so the cover reads as a box.
-  const endY0 = level.base + parapetTop;
-  const endH = ceilUnder - endY0;
-  for (const ex of [x0 + wallT / 2, x1 - wallT / 2]) {
-    box(parent, wallT, endH, depth, ex, endY0 + endH / 2, cz, mats.plaster);
+  // Roof only what the boxes leave: the corner box and any boxed bay build
+  // their own ceiling.
+  const covered = cornerCoveredRun(level.id, b.id);
+  const taken = covered ? [[covered.x0, covered.x1]] : [];
+  for (const bay of boxedBays(level.id, b.id)) taken.push([bay.x0, bay.x1]);
+
+  for (const [x0, x1] of clearSpans(b.x0, b.x1, taken)) {
+    const cx = (x0 + x1) / 2;
+    box(parent, x1 - x0, bandT, depth, cx, ceilY, cz, mats.plaster);
+    box(parent, x1 - x0 - 0.3, 0.12, depth - 0.3, cx, ceilUnder - 0.06, cz, mats.plasterShade);
+
+    // Close the ends above the parapet so the cover reads as a box.
+    const endY0 = level.base + parapetTop;
+    const endH = ceilUnder - endY0;
+    for (const ex of [x0 + wallT / 2, x1 - wallT / 2]) {
+      box(parent, wallT, endH, depth, ex, endY0 + endH / 2, cz, mats.plaster);
+    }
+  }
+}
+
+/**
+ * A balcony bay given the corner box's treatment in the building's own white:
+ * the same projection, a capping band reaching the slab above, walls on the
+ * pillars either side and posts at the open face. The divider wall it meets on
+ * one side is already there; this closes the other side.
+ */
+function balconyBox(parent, bay, level, mats) {
+  const top = roofDatum(level.id).y - BUILDING.slabT;
+  const { ceilingT } = BALCONY_COVERS;
+  const { wallT } = CORNER_FRAME;
+  const cx = (bay.x0 + bay.x1) / 2;
+  const cz = (bay.z0 + bay.z1) / 2;
+  const w = bay.x1 - bay.x0;
+  const depth = bay.z1 - bay.z0;
+  const under = top - ceilingT;
+  const h = under - level.base;
+  const face = bay.front ? bay.z1 : bay.z0;
+
+  box(parent, w, ceilingT, depth, cx, top - ceilingT / 2, cz, mats.plaster);
+  box(parent, w - 0.3, 0.12, depth - 0.3, cx, under - 0.06, cz, mats.plasterShade);
+
+  for (const wx of [bay.x0 + wallT / 2, bay.x1 - wallT / 2]) {
+    box(parent, wallT, h, depth, wx, level.base + h / 2, cz, mats.plaster);
+  }
+  for (const px of [bay.x0 + 0.3, bay.x1 - 0.3]) {
+    box(parent, 0.6, h, 0.6, px, level.base + h / 2,
+      face + (bay.front ? -0.3 : 0.3), mats.plaster);
   }
 }
 
@@ -265,21 +321,27 @@ function balcony(parent, b, level, mats) {
   // at one end and the dividing wall at the other, instead of stopping at the
   // drawn balcony edge and leaving a strip of bare floor inside the box.
   const covered = cornerCoveredRun(level.id, b.id);
+  const bays = boxedBays(level.id, b.id);
   const boxFace = covered ? covered.z1 - 0.28 : 0;
   const boxWall = covered ? covered.x0 + CORNER_FRAME.wallT + 0.28 : 0;
   const divideX = covered
     ? columnFootprint(BALCONY_COVERS.divides[b.id]).x0
     : 0;
 
+  for (const bay of bays) balconyBox(g, bay, level, mats);
+
   for (const s of b.sides) {
     // The parapet goes on the outer edge: 'front' balconies project past
     // FRONT_Z, so their open edge is the high-z one, and 'rear' balconies
     // project past REAR_Z, so theirs is the low-z one.
     if (s === 'front') {
-      if (covered) {
-        parapet(true, boxWall, divideX, boxFace);
-        parapet(true, covered.x1, b.x1, b.z1 - 0.28);
-      } else parapet(true, b.x0, b.x1, b.z1 - 0.28);
+      const taken = covered ? [[covered.x0, covered.x1]] : [];
+      for (const bay of bays) taken.push([bay.x0, bay.x1]);
+      for (const [r0, r1] of clearSpans(b.x0, b.x1, taken)) {
+        parapet(true, r0, r1, b.z1 - 0.28);
+      }
+      if (covered) parapet(true, boxWall, divideX, boxFace);
+      for (const bay of bays) parapet(true, bay.x0, bay.x1, bay.z1 - 0.28);
     } else if (s === 'rear') parapet(true, b.x0, b.x1, b.z0 + 0.28);
     else if (s === 'west') {
       if (covered) parapet(false, b.z0, boxFace + 0.25, boxWall);
