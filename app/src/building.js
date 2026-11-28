@@ -20,6 +20,8 @@ export function makeMaterials() {
   const rail = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.4, metalness: 0.75 });
   const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a33, roughness: 0.6 });
   const concrete = new THREE.MeshStandardMaterial({ color: 0xd0cabf, roughness: 0.95 });
+  const grey = new THREE.MeshStandardMaterial({ color: 0xa2a7ab, roughness: 0.9 });
+  const greyShade = new THREE.MeshStandardMaterial({ color: 0x8f9499, roughness: 0.95 });
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0xcfe4ea, roughness: 0.06, metalness: 0.0, transparent: true, opacity: 0.3,
     envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false,
@@ -37,7 +39,7 @@ export function makeMaterials() {
   const iron = new THREE.MeshStandardMaterial({ color: 0x4a4d52, roughness: 0.55, metalness: 0.7 });
   const soil = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 1.0 });
   const foliage = new THREE.MeshStandardMaterial({ color: 0x3f6b3a, roughness: 0.9, flatShading: true });
-  return { plaster, plasterShade, plinth, slab, coping, frame, rail, wood, concrete, glass, glassRail, darkGlass, tank, metal, iron, soil, foliage };
+  return { plaster, plasterShade, plinth, slab, coping, frame, rail, wood, concrete, grey, greyShade, glass, glassRail, darkGlass, tank, metal, iron, soil, foliage };
 }
 
 function box(parent, w, h, d, x, y, z, mat) {
@@ -243,10 +245,10 @@ function balconyCover(parent, b, level, mats) {
 }
 
 /**
- * A balcony bay given the corner box's treatment in the building's own white:
- * the same projection, a capping band reaching the slab above, walls on the
- * pillars either side and posts at the open face. The divider wall it meets on
- * one side is already there; this closes the other side.
+ * A balcony bay given the corner box's treatment, in grey rather than the
+ * corner's timber: a capping band reaching the slab above, walls on the pillars
+ * either side and posts at the open face, out to the balcony's own depth. The
+ * divider wall it meets on one side is already there; this closes the other.
  */
 function balconyBox(parent, bay, level, mats) {
   const top = roofDatum(level.id).y - BUILDING.slabT;
@@ -260,15 +262,15 @@ function balconyBox(parent, bay, level, mats) {
   const h = under - level.base;
   const face = bay.front ? bay.z1 : bay.z0;
 
-  box(parent, w, ceilingT, depth, cx, top - ceilingT / 2, cz, mats.plaster);
-  box(parent, w - 0.3, 0.12, depth - 0.3, cx, under - 0.06, cz, mats.plasterShade);
+  box(parent, w, ceilingT, depth, cx, top - ceilingT / 2, cz, mats.grey);
+  box(parent, w - 0.3, 0.12, depth - 0.3, cx, under - 0.06, cz, mats.greyShade);
 
   for (const wx of [bay.x0 + wallT / 2, bay.x1 - wallT / 2]) {
-    box(parent, wallT, h, depth, wx, level.base + h / 2, cz, mats.plaster);
+    box(parent, wallT, h, depth, wx, level.base + h / 2, cz, mats.grey);
   }
   for (const px of [bay.x0 + 0.3, bay.x1 - 0.3]) {
     box(parent, 0.6, h, 0.6, px, level.base + h / 2,
-      face + (bay.front ? -0.3 : 0.3), mats.plaster);
+      face + (bay.front ? -0.3 : 0.3), mats.grey);
   }
 }
 

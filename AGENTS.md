@@ -168,9 +168,11 @@ the C2-C3 bay at the third: they are the balcony's roof there, so they are drawn
 6'-0" from the wall face - 4'-0" of balcony plus 2'-0". The second floor's is a
 roof extension, the third floor's are boxes. No other roof is 6'-0" wide.
 
-A bay listed in `BALCONY_BOXES` takes the corner box's treatment in white -
-`balconyBox()` in `building.js`: the same projection, a capping band reaching
-the slab above, walls on the pillars either side and posts at the open face.
+A bay listed in `BALCONY_BOXES` takes the corner box's treatment, in the grey
+palette (`mats.grey` / `mats.greyShade`) rather than the corner's timber -
+`balconyBox()` in `building.js`: the balcony's own projection, a capping band
+reaching the slab above, walls on the pillars either side and posts at the open
+face.
 `boxedBays()` hands back the plan rect, `balconyRoofFace()` reports how far the
 roof reaches so the dividing wall and the railing meet it, and both the cover
 and the railing use `clearSpans()` to stay clear of the runs a box has taken.
