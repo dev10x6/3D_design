@@ -372,7 +372,30 @@ export const CORNER_FRAME = {
   covers: 'front',
   lip: 0.4,
   style: 'wood',
+  // One large glazed opening in the box's side wall. The insets are measured
+  // from the wall's own ends and from its floor and head, so the opening
+  // follows the wall when the eave or the balcony changes. `panes` counts the
+  // lights between the mullions, `frame` is the width of the frame bars.
+  sideWindow: { endInset: 1.4, sill: 0.9, headInset: 1.1, panes: 4, frame: 0.22 },
+  // The side wall carries on above the box roof to the top of this pillar's
+  // roof-frame column, so the wall reads as tied to the frame it stands under.
+  sideWallPillar: 'C1',
 };
+
+/**
+ * Top of the roof-frame column the corner box's side wall rises to, and the
+ * pillar it continues. Read from GROUND_COLUMNS and ROOF_FRAME, so the wall
+ * lands on the pillar's own top rather than a height repeated here.
+ */
+export function cornerWallTop() {
+  const pillar = GROUND_COLUMNS.find((c) => c.id === CORNER_FRAME.sideWallPillar);
+  if (!pillar) {
+    throw new Error(
+      `CORNER_FRAME.sideWallPillar is not a pillar: ${CORNER_FRAME.sideWallPillar}`,
+    );
+  }
+  return { pillar, top: roofTopFace() + ROOF_FRAME.columnHeight };
+}
 
 // Finish palettes for the two corner treatments, transcribed from the two
 // reference renders.

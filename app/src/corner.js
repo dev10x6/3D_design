@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {
   BUILDING, OPENINGS, BALCONIES, CORNER_FRAME, CORNER_STYLES, ROOF_EXTENSIONS,
-  EAVE_FASCIA, roofDatum, extensionRects,
+  EAVE_FASCIA, roofDatum, extensionRects, cornerWallTop,
 } from './spec.js';
 
 const FASCIA_H = EAVE_FASCIA;
@@ -16,6 +16,10 @@ function cornerMats(styleKey) {
     wall: std(s.wall, 0.9),
     soffit: std(s.soffit, 0.8),
     frame: std(s.frame, 0.55),
+    glass: new THREE.MeshPhysicalMaterial({
+      color: s.glass, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.55,
+      envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false,
+    }),
   };
 }
 
@@ -84,6 +88,7 @@ function footprint() {
 
   const base = roofDatum(CORNER_FRAME.floorLevel);
   const top = roofDatum(CORNER_FRAME.roofLevel);
+  const wallTop = cornerWallTop();
 
   return {
     front, east, band, arm: side, balcony,
@@ -91,6 +96,10 @@ function footprint() {
     // Fills the storey: floor slab top up to just under the roof slab, clearing
     // the fascia lip that hangs below the eave.
     height: top.y - BUILDING.slabT - FASCIA_H - base.y,
+    // The side wall carries on past the box roof to the top of its pillar's
+    // roof-frame column.
+    wallTopY: wallTop.top,
+    wallPillar: wallTop.pillar,
     floorExt, roofExt,
   };
 }
@@ -107,9 +116,7 @@ function buildBox(parent, fp, styleKey, mats) {
   // The street face is left open: the box is a cantilevered frame over the
   // balcony, so the balcony parapet is what you see inside it. Only the side
   // face and the two returns are solid.
-  const outerX = fp.east ? arm.x1 : arm.x0;
-  box(parent, wallT, height, arm.z1 - arm.z0,
-    outerX - (fp.east ? wallT / 2 : -wallT / 2), yMid, (arm.z0 + arm.z1) / 2, mats.cladding);
+  sideWall(parent, fp, mats);
 
   // Return walls closing the L at the free end of each arm.
   const endX = fp.east ? band.x0 : band.x1;
@@ -143,6 +150,54 @@ function buildBox(parent, fp, styleKey, mats) {
   } else {
     fins(parent, fp, topY, mats);
     columnBands(parent, fp, mats);
+  }
+}
+
+// The box's side wall: solid piers and spandrels round one large glazed
+// opening, carried on above the box roof to the top of the pillar the spec
+// names, so the wall reads as tied to the roof frame it stands under.
+function sideWall(parent, fp, mats) {
+  const { baseY, height, arm, wallTopY } = fp;
+  const wallT = 0.45;
+  const topY = baseY + height;
+  // Outer face of the wall, and its centre line just inside that.
+  const outerX = fp.east ? arm.x1 : arm.x0;
+  const x = outerX + (fp.east ? -wallT / 2 : wallT / 2);
+  const out = fp.east ? 1 : -1;
+  const { endInset, sill, headInset, panes, frame: fT } = CORNER_FRAME.sideWindow;
+
+  const z0 = arm.z0 + endInset;
+  const z1 = arm.z1 - endInset;
+  const ySill = baseY + sill;
+  const yHead = topY - headInset;
+  const zc = (z0 + z1) / 2;
+
+  // Piers either end of the opening, full height.
+  box(parent, wallT, height, z0 - arm.z0, x, baseY + height / 2, (arm.z0 + z0) / 2, mats.cladding);
+  box(parent, wallT, height, arm.z1 - z1, x, baseY + height / 2, (z1 + arm.z1) / 2, mats.cladding);
+  // Spandrel below the sill and the head band above it.
+  box(parent, wallT, ySill - baseY, z1 - z0, x, (baseY + ySill) / 2, zc, mats.cladding);
+  box(parent, wallT, topY - yHead, z1 - z0, x, (yHead + topY) / 2, zc, mats.cladding);
+
+  // Glazing, set back in the wall so the frame stands proud of it.
+  const gx = outerX - out * 0.12;
+  box(parent, 0.08, yHead - ySill, z1 - z0, gx, (ySill + yHead) / 2, zc, mats.glass);
+
+  // Frame: a surround plus mullions splitting the opening into `panes` lights.
+  const fx = outerX + out * 0.02;
+  const fy = (ySill + yHead) / 2;
+  box(parent, 0.14, fT, z1 - z0, fx, ySill + fT / 2, zc, mats.frame);
+  box(parent, 0.14, fT, z1 - z0, fx, yHead - fT / 2, zc, mats.frame);
+  box(parent, 0.14, yHead - ySill, fT, fx, fy, z0 + fT / 2, mats.frame);
+  box(parent, 0.14, yHead - ySill, fT, fx, fy, z1 - fT / 2, mats.frame);
+  for (let i = 1; i < panes; i++) {
+    box(parent, 0.14, yHead - ySill, fT * 0.7, fx, fy, z0 + ((z1 - z0) * i) / panes, mats.frame);
+  }
+
+  // Above the box roof the wall carries on to the pillar's top.
+  if (wallTopY > topY) {
+    box(parent, wallT, wallTopY - topY, arm.z1 - arm.z0, x, (topY + wallTopY) / 2,
+      (arm.z0 + arm.z1) / 2, mats.cladding);
   }
 }
 

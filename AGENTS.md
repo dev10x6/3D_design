@@ -110,6 +110,19 @@ The street face of the box is deliberately open: it is a cantilevered frame over
 the balcony, so the balcony parapet is what you see inside it. Do not wall that
 face up or the balcony disappears behind it.
 
+The side wall is solid except for one large glazed opening, set from
+`CORNER_FRAME.sideWindow`: the insets are measured from the wall's own ends and
+from its floor and head, so the opening follows the wall when the eave or the
+balcony changes, and `panes` only splits it into lights. `sideWall()` builds the
+wall as piers and spandrels round that opening rather than as one box, because a
+single box cannot be glazed.
+
+Above the box roof the side wall carries on to the top of the roof-frame column
+named by `CORNER_FRAME.sideWallPillar`, so the wall lands on the beam those
+pillars carry instead of stopping at the box roof. `cornerWallTop()` reads the
+height from `GROUND_COLUMNS` and `ROOF_FRAME`, so the wall and the frame cannot
+drift apart; do not put the height in `corner.js`.
+
 `buildCorner(style)` returns `{ levels, footprint, mats, style }`, with one
 group per storey it passes through; `main.js` parents each into the matching
 level group so level isolation still works even though the box is a single
